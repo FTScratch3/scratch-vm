@@ -7,6 +7,18 @@ const MotorDirectionEnum = {
     MOTOR_STOP: 0
 };
 
+/**
+ * @enum
+ */
+const MotorSyncEnum = {
+    SYNC_NO_CHANGE: -1,
+    SYNC_NONE: -1,
+    SYNC_MOTOR1: 1,
+    SYNC_MOTOR2: 2,
+    SYNC_MOTOR3: 3,
+    SYNC_MOTOR4: 4,
+};
+
 class Motor {
     constructor(id) {
         this.id = id;
@@ -88,5 +100,6 @@ class Motor {
 
 module.exports = {
     MotorDirectionEnum,
+    MotorSyncEnum,
     Motor
 };
