@@ -180,15 +180,19 @@ class TxtController {
     }
 
     waitForMotorCallback(motorId, steps) {
+        console.log("waitForMotorCallback", {motorId, steps})
         return new Promise(resolve => {
+            let counter = this.getCounterById(motorId);
             let check = () => {
-                if (this.counters[motorId].value >= steps) {
+                if (counter.value >= steps) {
                     resolve();
                     return true;
                 }
                 return false;
             };
-            this._motorWaitCallbacks.push(check);
+            setTimeout(() => {
+                this._motorWaitCallbacks.push(check);
+            }, 150);
         });
     }
 
@@ -239,6 +243,7 @@ class TxtController {
 
     // Methods for blocks
     doSetMotorSpeedDirDist(motorId, steps, speed, directionID) {
+        console.log("doSetMotorSpeedDirDist", {motorId, steps, speed, directionID})
         let motor = this.getMotorById(motorId)
             .setDirection(directionID)
             .setSpeed(speed)
@@ -246,10 +251,11 @@ class TxtController {
 
         this.sendUpdateIfNeeded();
 
-        return this.waitForMotorCallback(motor.id, steps);
+        return this.waitForMotorCallback(motorId, steps);
     }
 
     doSetMotorSpeedDirSync(motor1Id, motor2Id, speed, directionID) {
+        console.log("doSetMotorSpeedDirSync", {motor1Id, motor2Id, speed, directionID})
         if (motor1Id === motor2Id)
             return;
 
@@ -334,6 +340,7 @@ class TxtController {
     }
 
     onOpenClose(inputId, sensorID, directionType) {
+        console.log({inputId, sensorID, directionType})
         let input = this.getInputById(inputId);
         input.adjustDigitalInputMode(sensorID);
         this.sendUpdateIfNeeded();
@@ -613,7 +620,7 @@ class Scratch3TxtBlocks {
                         OUTPUT: {
                             type: ArgumentType.NUMBER,
                             menu: 'outputID',
-                            defaultValue: OutputID.L1
+                            defaultValue: OutputID.O1
                         },
                         NUM: {
                             type: ArgumentType.NUMBER,
@@ -819,7 +826,7 @@ class Scratch3TxtBlocks {
                         MOTOR_ID2: {
                             type: ArgumentType.NUMBER,
                             menu: 'motorID',
-                            defaultValue: 0
+                            defaultValue: 1
                         },
                         DIRECTION: {
                             type: ArgumentType.NUMBER,
@@ -851,7 +858,7 @@ class Scratch3TxtBlocks {
                         MOTOR_ID2: {
                             type: ArgumentType.NUMBER,
                             menu: 'motorID',
-                            defaultValue: 0
+                            defaultValue: 1
                         },
                         DIRECTION: {
                             type: ArgumentType.NUMBER,
@@ -875,12 +882,12 @@ class Scratch3TxtBlocks {
                     opcode: 'doStopMotorAndReset',
                     text: formatMessage({
                         id: 'ftxt.doStopMotorAndReset',
-                        default: 'Reset [MOTOR_ID]',
+                        default: 'Reset [MOTOR]',
                         description: 'Stop the motor and reset all synchronizations.'
                     }),
                     blockType: BlockType.COMMAND,
                     arguments: {
-                        MOTOR_ID: {
+                        MOTOR: {
                             type: ArgumentType.NUMBER,
                             menu: 'motorID',
                             defaultValue: 0
@@ -912,7 +919,6 @@ class Scratch3TxtBlocks {
                 compares: ['<', '>']
             }
         };
-        console.log({newVar})
         return newVar;
     }
 
@@ -1061,7 +1067,7 @@ class Scratch3TxtBlocks {
         for (let n = 0; n < count; n++) {
             result.push({
                 text: String(n + 1),
-                value: n
+                value: String(n)
             })
         }
         return result;
@@ -1098,88 +1104,154 @@ class Scratch3TxtBlocks {
      * @param args
      */
     doPlaySound(args) {
-        this._device.doPlaySound(args.NUM)
+        this._device.doPlaySound(
+            Cast.toNumber(args.NUM)
+        )
     }
 
     doPlaySoundWait(args) {
-        return this._device.doPlaySoundAndWait(args.NUM);
+        return this._device.doPlaySoundAndWait(
+            Cast.toNumber(args.NUM)
+        );
     }
 
     doSetMotorSpeed(args) {
-        return this._device.doSetMotorSpeed(args.MOTOR_ID, args.SPEED);
+        return this._device.doSetMotorSpeed(
+            Cast.toNumber(args.MOTOR_ID),
+            Cast.toNumber(args.SPEED)
+        );
     }
 
     doSetMotorSpeedDir(args) {
-        return this._device.doSetMotorSpeedDir(args.MOTOR_ID, args.SPEED, args.DIRECTION);
+        return this._device.doSetMotorSpeedDir(
+            Cast.toNumber(args.MOTOR_ID),
+            Cast.toNumber(args.SPEED),
+            Cast.toNumber(args.DIRECTION)
+        );
     }
 
     doSetMotorDir(args) {
-        return this._device.doSetMotorDir(args.MOTOR_ID, args.DIRECTION);
+        return this._device.doSetMotorDir(
+            Cast.toNumber(args.MOTOR_ID),
+            Cast.toNumber(args.DIRECTION)
+        );
     }
 
     doStopMotor(args) {
-        return this._device.doSetMotorSpeed(args.MOTOR_ID, 0);
+        return this._device.doSetMotorSpeed(
+            Cast.toNumber(args.MOTOR_ID),
+            0
+        );
     }
 
     doStopMotorAndReset(args) {
-        return this._device.doStopMotorAndReset(args.MOTOR_ID);
+        return this._device.doStopMotorAndReset(
+            Cast.toNumber(args.MOTOR)
+        );
     }
 
 
     doSetMotorSpeedDirDist(args) {
-        return this._device.doSetMotorSpeedDirDist(args.MOTOR_ID, args.STEPS, args.SPEED, args.DIRECTION)
+        return this._device.doSetMotorSpeedDirDist(
+            Cast.toNumber(args.MOTOR_ID),
+            Cast.toNumber(args.STEPS),
+            Cast.toNumber(args.SPEED),
+            Cast.toNumber(args.DIRECTION)
+        )
     }
 
     doSetMotorSpeedDirSync(args) {
-        return this._device.doSetMotorSpeedDirSync(args.MOTOR_ID, args.MOTOR_ID2, args.SPEED, args.DIRECTION)
+        return this._device.doSetMotorSpeedDirSync(
+            Cast.toNumber(args.MOTOR_ID),
+            Cast.toNumber(args.MOTOR_ID2),
+            Cast.toNumber(args.SPEED),
+            Cast.toNumber(args.DIRECTION)
+        )
     }
 
+    // FIXME: Removing this block after executing it gives an exception
     doSetMotorSpeedDirDistSync(args) {
-        return this._device.doSetMotorSpeedDirDistSync(args.MOTOR_ID, args.MOTOR_ID2, args.STEPS, args.SPEED, args.DIRECTION)
+        return this._device.doSetMotorSpeedDirDistSync(
+            Cast.toNumber(args.MOTOR_ID),
+            Cast.toNumber(args.MOTOR_ID2),
+            Cast.toNumber(args.STEPS),
+            Cast.toNumber(args.SPEED),
+            Cast.toNumber(args.DIRECTION)
+        )
     }
 
     isClosed(args) {
         // SENSOR, INPUT
-        return this._device.getDigitalSensor(args.INPUT, args.SENSOR);
+        return this._device.getDigitalSensor(
+            Cast.toNumber(args.INPUT),
+            Cast.toNumber(args.SENSOR)
+        );
     }
 
     getSensor(args) {
         // SENSOR, INPUT
-        return this._device.getSensor(args.INPUT, args.SENSOR);
+        return this._device.getSensor(
+            Cast.toNumber(args.INPUT),
+            Cast.toNumber(args.SENSOR)
+        );
     }
 
     getCounter(args) {
-        return this._device.getCounterById(args.COUNTER_ID).value;
+        return this._device.getCounterById(
+            Cast.toNumber(args.COUNTER_ID)
+        ).value;
     }
 
     doResetCounter(args) {
-        return this._device.doResetCounter(args.COUNTER_ID);
+        return this._device.doResetCounter(
+            Cast.toNumber(args.COUNTER_ID)
+        );
     }
 
     doSetLamp(args) {
-        let id = args.OUTPUT[5] - 1;
-        this._device.doSetOutputValue(id, args.NUM);
+        this._device.doSetOutputValue(
+            Cast.toNumber(args.OUTPUT),
+            Cast.toNumber(args.NUM)
+        );
     }
 
     doSetOutput(args) {
-        let id = args.OUTPUT[7] - 1;
-        this._device.doSetOutputValue(id, args.NUM);
+        this._device.doSetOutputValue(
+            Cast.toNumber(args.OUTPUT),
+            Cast.toNumber(args.NUM)
+        );
     }
 
     doConfigureInput(args) {
-        this._device.doConfigureInput(args.INPUT, args.MODE);
+        this._device.doConfigureInput(
+            Cast.toNumber(args.INPUT),
+            Cast.toNumber(args.MODE)
+        );
     }
 
     onOpenClose(args) {
-        return this._device.onOpenClose(args.INPUT, args.SENSOR, args.OPENCLOSE);
+        return this._device.onOpenClose(
+            Cast.toNumber(args.INPUT),
+            Cast.toNumber(args.SENSOR),
+            Cast.toNumber(args.OPENCLOSE)
+        );
     }
 
     onCounter(args) { // COUNTER_ID, OPERATOR, VALUE
-        return this._device.onCounter(args.COUNTER_ID, args.OPERATOR, args.VALUE);
+        return this._device.onCounter(
+            Cast.toNumber(args.COUNTER_ID),
+            args.OPERATOR,
+            Cast.toNumber(args.VALUE)
+        );
     }
 
     onInput(args) { // SENSOR, INPUT, OPERATOR, VALUE
-        return this._device.onInput(args.INPUT, args.SENSOR, args.OPERATOR, args.VALUE);
+        return this._device.onInput(
+            Cast.toNumber(args.INPUT),
+            Cast.toNumber(args.SENSOR),
+            args.OPERATOR,
+            Cast.toNumber(args.VALUE)
+        );
     }
 
     reset(args) {
