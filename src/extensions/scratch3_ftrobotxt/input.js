@@ -8,14 +8,14 @@ import {TxtInput} from "./txtInput";
  * @enum {string}
  */
 const InputID = {
-    I1: 'Input 1',
-    I2: 'Input 2',
-    I3: 'Input 3',
-    I4: 'Input 4',
-    I5: 'Input 5',
-    I6: 'Input 6',
-    I7: 'Input 7',
-    I8: 'Input 8',
+    I1: 0,
+    I2: 1,
+    I3: 2,
+    I4: 3,
+    I5: 4,
+    I6: 5,
+    I7: 6,
+    I8: 7,
 };
 
 /**
@@ -24,11 +24,11 @@ const InputID = {
  * @enum {string}
  */
 const InputModes = {
-    mode_a5k: 'Analogue resistance',
-    mode_d5k: 'Digital resistance',
-    mode_a10v: 'Analogue voltage',
-    mode_d10v: 'Digital voltage',
-    mode_ultrasonic: 'Ultrasonic',
+    mode_d10v: 0,
+    mode_d5k: 1,
+    mode_a10v: 2,
+    mode_a5k: 3,
+    mode_ultrasonic: 4,
 };
 
 /**
@@ -37,10 +37,10 @@ const InputModes = {
  * @enum {string}
  */
 const InputAnalogSensorTypes = {
-    sens_color: "Colour sensor",
-    sens_distance: "Distance sensor",
-    sens_ntc: "NTC resistance",
-    sens_photo: "Photo resistance",
+    sens_color: 0,
+    sens_distance: 1,
+    sens_ntc: 2,
+    sens_photo: 3,
 };
 
 /**
@@ -49,9 +49,9 @@ const InputAnalogSensorTypes = {
  * @enum {string}
  */
 const InputDigitalSensorTypes = {
-    sens_button: "Button",
-    sens_lightBarrier: "Light barrier",
-    sens_reed: "Reed contact"
+    sens_button: 0,
+    sens_lightBarrier: 1,
+    sens_reed: 2
 };
 
 /**
@@ -60,8 +60,8 @@ const InputDigitalSensorTypes = {
  * @enum {string}
  */
 const InputDigitalSensorChangeTypes = {
-    button_opens: "opens",
-    button_closes: "closes"
+    button_opens: 0,
+    button_closes: 1
 };
 
 class Input extends TxtInput {
@@ -90,8 +90,8 @@ class Input extends TxtInput {
         return this;
     }
 
-    adjustAnalogInputMode(modeName) {
-        switch (modeName) {
+    adjustAnalogInputMode(modeId) {
+        switch (modeId) {
             case InputAnalogSensorTypes.sens_color:
                 return this.setMode(2);
             case InputAnalogSensorTypes.sens_ntc:
@@ -104,8 +104,8 @@ class Input extends TxtInput {
         }
     }
 
-    adjustDigitalInputMode(modeName) {
-        switch (modeName) {
+    adjustDigitalInputMode(modeId) {
+        switch (modeId) {
             case InputDigitalSensorTypes.sens_button:
             case InputDigitalSensorTypes.sens_lightBarrier:
             case InputDigitalSensorTypes.sens_reed:

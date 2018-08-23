@@ -5,22 +5,10 @@
  * @enum {string}
  */
 const MotorID = {
-    M1: 'Motor 1',
-    M2: 'Motor 2',
-    M3: 'Motor 3',
-    M4: 'Motor 4',
-};
-
-
-
-/**
- * Enum for motor direction specification.
- * @readonly
- * @enum {string}
- */
-const MotorDirection = {
-    FORWARD: 'forward',
-    REVERSE: 'backwards'
+    M1: 1,
+    M2: 2,
+    M3: 3,
+    M4: 4,
 };
 
 
@@ -126,7 +114,6 @@ class Motor {
 
 module.exports = {
     MotorDirectionEnum,
-    MotorDirection,
     MotorSyncEnum,
     MotorID,
     Motor

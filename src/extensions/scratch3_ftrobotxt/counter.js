@@ -8,10 +8,10 @@ import {TxtInput} from "./txtInput";
  * @enum {string}
  */
 const CounterID = {
-    C1: 'Counter 1',
-    C2: 'Counter 2',
-    C3: 'Counter 3',
-    C4: 'Counter 4',
+    C1: 0,
+    C2: 1,
+    C3: 2,
+    C4: 3,
 };
 
 
