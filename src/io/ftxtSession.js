@@ -31,7 +31,19 @@ class ftxtSession {
         this._ws.onerror = () => this._sendError('ws onerror');
         this._ws.onclose = () => this._sendError('ws onclose');
         this._ws.onmessage = msg => this._didReceiveMessage(msg);
+
+        this._connectionCheckInterval = null;
     }
+
+    checkIfStillConnected() {
+        if (this.connectedToDevice()) {
+            this.sendPingMessage();
+        } else {
+            clearInterval(this._connectionCheckInterval);
+            this._connectionCheckInterval = null;
+        }
+    }
+
 
     connectedToDevice() {
         return this._status === 2;
@@ -59,9 +71,8 @@ class ftxtSession {
     _handleMessageSoundDone(msg) {
         this._soundDoneCallback();
     }
-    _handleMessageSens(msg) {
 
-        console.log("sens", msg); // TODO: Remove
+    _handleMessageSens(msg) {
         this._sensCallback(msg.data);
     }
 
@@ -70,15 +81,18 @@ class ftxtSession {
         let deviceChanged = this._device !== connectedDevice;
         this._device = connectedDevice;
         if (!connectedDevice) {
-
             // socket is connected, but no device is connected
             this._status = 1;
+            this._runtime.emit(this._runtime.constructor.PERIPHERAL_ERROR);
         } else {
             // socket and device connected
             this._status = 2;
             if (deviceChanged) {
                 this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTED);
                 this._connectCallback();
+                if (this._connectionCheckInterval)
+                    clearInterval(this._connectionCheckInterval);
+                setInterval(() => this.checkIfStillConnected(), 1500);
             }
         }
     }
@@ -140,7 +154,7 @@ class ftxtSession {
 class FTxtIncomingMessage {
 
     /**
-     * @param {string} data
+     * @param {string} message
      */
     constructor(message) {
 
