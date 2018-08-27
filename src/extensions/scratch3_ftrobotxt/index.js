@@ -1,9 +1,7 @@
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
-const Clone = require('../../util/clone');
 const Cast = require('../../util/cast');
 const formatMessage = require('format-message');
-// describes one motor (speed, direction, distance, sync)
 import {ftxtSession} from "../../io/ftxtSession";
 import {Motor, MotorDirectionEnum, MotorSyncEnum} from "./motor";
 import {Output, OutputID} from "./output";
@@ -14,7 +12,7 @@ import {
 } from "./input";
 
 // TODO: Stop motor on program abort!!
-
+// TODO: Synchronized motors do not work after one of them had a counter limit
 
 /**
  * Manage communication with a WeDo 2.0 device over a Device Manager client socket.
@@ -32,18 +30,13 @@ class TxtController {
      * Construct a WeDo2 communication object.
      * @param runtime
      */
-    constructor(runtime) {
+    constructor(runtime, extensionId) {
         /**
          * The socket-IO socket used to communicate with the Device Manager about this device.
          * @type {ftxtSession}
          * @private
          */
         this._runtime = runtime;
-        this._socket = new ftxtSession(this._runtime,
-            () => this._onSessionConnect(),
-            message => this.onSensData(message),
-            () => this.onSoundDone()
-        );
 
         /**
          * Callbacks used to wait for motor input
@@ -68,8 +61,32 @@ class TxtController {
         this.counters = [
             new Counter(0), new Counter(1), new Counter(2), new Counter(3)
         ];
+
+
+        this._runtime.registerExtensionDevice(extensionId, this);
     }
 
+    // CONNECTION METHODS
+
+    getPeripheralIsConnected() {
+        return this._socket ? this._socket.getPeripheralIsConnected() : false;
+    }
+
+    startDeviceScan() {
+        this._socket = new ftxtSession(this._runtime,
+            () => this._onSessionConnect(),
+            message => this.onSensData(message),
+            () => this.onSoundDone()
+        );
+    }
+
+    disconnectSession() {
+        this.reset();
+        this._socket.disconnectSession();
+    }
+
+
+    // CONNECTION METHODS DONE
 
     checkIfUpdateIsNeeded() {
         let needsUpdate = false;
@@ -180,7 +197,6 @@ class TxtController {
     }
 
     waitForMotorCallback(motorId, steps) {
-        console.log("waitForMotorCallback", {motorId, steps})
         return new Promise(resolve => {
             let counter = this.getCounterById(motorId);
             let check = () => {
@@ -243,8 +259,7 @@ class TxtController {
 
     // Methods for blocks
     doSetMotorSpeedDirDist(motorId, steps, speed, directionID) {
-        console.log("doSetMotorSpeedDirDist", {motorId, steps, speed, directionID})
-        let motor = this.getMotorById(motorId)
+        this.getMotorById(motorId)
             .setDirection(directionID)
             .setSpeed(speed)
             .setDistanceLimit(steps);
@@ -255,7 +270,6 @@ class TxtController {
     }
 
     doSetMotorSpeedDirSync(motor1Id, motor2Id, speed, directionID) {
-        console.log("doSetMotorSpeedDirSync", {motor1Id, motor2Id, speed, directionID})
         if (motor1Id === motor2Id)
             return;
 
@@ -308,7 +322,6 @@ class TxtController {
 
 
     doSetOutputValue(outputID, value) {
-        console.log(outputID, typeof outputID);
         this.outputs[outputID].setValue(value * 100 / 8);
         this.sendUpdateIfNeeded();
     }
@@ -340,7 +353,6 @@ class TxtController {
     }
 
     onOpenClose(inputId, sensorID, directionType) {
-        console.log({inputId, sensorID, directionType})
         let input = this.getInputById(inputId);
         input.adjustDigitalInputMode(sensorID);
         this.sendUpdateIfNeeded();
@@ -418,14 +430,16 @@ class Scratch3TxtBlocks {
         this.connect();
     }
 
+    // noinspection JSMethodCanBeStatic
     /**
      * @returns {object} metadata for this extension and its blocks.
      */
     getInfo() {
-        let newVar = {
+        return {
             id: Scratch3TxtBlocks.EXTENSION_ID,
             name: 'TXT-Controller',
             iconURI: "", // TODO
+            showStatusButton: true,
             blocks: [
                 // EVENTS
                 {
@@ -907,25 +921,23 @@ class Scratch3TxtBlocks {
                 //*/
             ],
             menus: {
-                motorID: this._buildIDMenu(4),
-                counterID: this._buildIDMenu(4),
-                inputID: this._buildIDMenu(8),
-                outputID: this._buildIDMenu(8),
-                inputModes: this._buildInputModeMenu(),
-                inputAnalogSensorTypes: this._buildAnalogSensorTypeMenu(),
-                inputDigitalSensorTypes: this._buildDigitalSensorTypeMenu(),
-                inputDigitalSensorChangeTypes: this._buildOpenCloseMenu(),
-                motorDirection: this._buildDirectionMenu(),
+                motorID: Scratch3TxtBlocks._buildIDMenu(4),
+                counterID: Scratch3TxtBlocks._buildIDMenu(4),
+                inputID: Scratch3TxtBlocks._buildIDMenu(8),
+                outputID: Scratch3TxtBlocks._buildIDMenu(8),
+                inputModes: Scratch3TxtBlocks._buildInputModeMenu(),
+                inputAnalogSensorTypes: Scratch3TxtBlocks._buildAnalogSensorTypeMenu(),
+                inputDigitalSensorTypes: Scratch3TxtBlocks._buildDigitalSensorTypeMenu(),
+                inputDigitalSensorChangeTypes: Scratch3TxtBlocks._buildOpenCloseMenu(),
+                motorDirection: Scratch3TxtBlocks._buildDirectionMenu(),
                 compares: ['<', '>']
             }
         };
-        return newVar;
     }
 
     // ---- MENU START
 
-    _buildDigitalSensorTypeMenu() {
-        console.log("_buildDigitalSensorTypeMenu")
+    static _buildDigitalSensorTypeMenu() {
         return [{
             text: formatMessage({
                 id: 'ftxt.sensor_digital_button',
@@ -950,8 +962,7 @@ class Scratch3TxtBlocks {
         }];
     }
 
-    _buildAnalogSensorTypeMenu() {
-        console.log("_buildAnalogSensorTypeMenu")
+    static _buildAnalogSensorTypeMenu() {
         return [{
             text: formatMessage({
                 id: 'ftxt.sensor_analog_color',
@@ -983,8 +994,7 @@ class Scratch3TxtBlocks {
         }];
     }
 
-    _buildInputModeMenu() {
-        console.log("_buildInputModeMenu")
+    static _buildInputModeMenu() {
         return [{
             text: formatMessage({
                 id: 'ftxt.input_mode_d10v',
@@ -1023,8 +1033,7 @@ class Scratch3TxtBlocks {
         }];
     }
 
-    _buildOpenCloseMenu() {
-        console.log("_buildOpenCloseMenu");
+    static _buildOpenCloseMenu() {
         return [{
             text: formatMessage({
                 id: 'ftxt.input_digital_opens',
@@ -1042,8 +1051,7 @@ class Scratch3TxtBlocks {
         }];
     }
 
-    _buildDirectionMenu() {
-        console.log("_buildDirectionMenu");
+    static _buildDirectionMenu() {
         return [{
             text: formatMessage({
                 id: 'ftxt.motor_forward',
@@ -1061,8 +1069,7 @@ class Scratch3TxtBlocks {
         }];
     }
 
-    _buildIDMenu(count) {
-        console.log("_buildIDMenu");
+    static _buildIDMenu(count) {
         const result = [];
         for (let n = 0; n < count; n++) {
             result.push({
@@ -1080,13 +1087,13 @@ class Scratch3TxtBlocks {
      * TODO!
      */
     connect() {
-        console.log("TRY TO CONNECT")
+        console.log("TRY TO CONNECT");
         if (this._device) {
             return;
         }
 
         //TODO: Automatic reconnect
-        this._device = new TxtController(this.runtime);
+        this._device = new TxtController(this.runtime, Scratch3TxtBlocks.EXTENSION_ID);
     }
 
     getPeripheralIsConnected() {
@@ -1254,7 +1261,7 @@ class Scratch3TxtBlocks {
         );
     }
 
-    reset(args) {
+    reset() {
         return this._device.reset();
     }
 
