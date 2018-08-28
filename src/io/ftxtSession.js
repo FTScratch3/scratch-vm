@@ -1,5 +1,5 @@
-//const ScratchLinkWebSocket = 'ws://127.0.0.1:8001/api';
-const ScratchLinkWebSocket = 'ws://10.230.0.1:8001/api';
+const ScratchLinkWebSocket = 'ws://127.0.0.1:8001/api';
+//const ScratchLinkWebSocket = 'ws://10.230.0.1:8001/api';
 
 /**
  * Commands supported by this connection

@@ -11,8 +11,9 @@ import {
     InputDigitalSensorTypes, InputDigitalSensorChangeTypes,
 } from "./input";
 
-// TODO: Stop motor on program abort!!
-// TODO: Synchronized motors do not work after one of them had a counter limit
+// TODO: Grafiken
+// TODO: Verbindungsdialog
+// TODO: Sprache
 
 /**
  * Manage communication with a WeDo 2.0 device over a Device Manager client socket.
@@ -29,6 +30,7 @@ class TxtController {
     /**
      * Construct a WeDo2 communication object.
      * @param runtime
+     * @param extensionId
      */
     constructor(runtime, extensionId) {
         /**
@@ -37,6 +39,7 @@ class TxtController {
          * @private
          */
         this._runtime = runtime;
+        this._runtime.on('PROJECT_STOP_ALL', this.reset.bind(this));
 
         /**
          * Callbacks used to wait for motor input
@@ -154,9 +157,6 @@ class TxtController {
      * Starts reading data from device after BLE has connected to it.
      */
     _onSessionConnect() { // TODO Remove or use
-        //const callback = this._processSessionData.bind(this);
-        //this._ble.read(BLEUUID.service, BLEUUID.rxChar, true, callback);
-        //this._timeoutID = window.setInterval(this.disconnectSession.bind(this), BLETimeout);
     }
 
     // Status
@@ -181,7 +181,7 @@ class TxtController {
      * @returns {Input|null}
      */
     getInputById(id) {
-        if (id < 0 || id > 3)
+        if (id < 0 || id > 7)
             return null;
         return this.inputs[id];
     }
@@ -279,10 +279,12 @@ class TxtController {
         motor1
             .setSync(motor2.id)
             .setDirection(directionID)
+            .resetDistanceLimit()
             .setSpeed(speed);
 
         motor2
             .setDirection(directionID)
+            .resetDistanceLimit()
             .setSpeed(speed);
 
         this.sendUpdateIfNeeded();
