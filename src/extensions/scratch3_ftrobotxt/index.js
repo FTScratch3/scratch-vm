@@ -269,7 +269,7 @@ class TxtController {
         return this.waitForMotorCallback(motorId, steps);
     }
 
-    doSetMotorSpeedDirSync(motor1Id, motor2Id, speed, directionID) {
+    doSetMotorSpeedDirSync(motor1Id, directionID1, motor2Id, directionID2, speed) {
         if (motor1Id === motor2Id)
             return;
 
@@ -278,19 +278,19 @@ class TxtController {
 
         motor1
             .setSync(motor2.id)
-            .setDirection(directionID)
+            .setDirection(directionID1)
             .resetDistanceLimit()
             .setSpeed(speed);
 
         motor2
-            .setDirection(directionID)
+            .setDirection(directionID2)
             .resetDistanceLimit()
             .setSpeed(speed);
 
         this.sendUpdateIfNeeded();
     }
 
-    doSetMotorSpeedDirDistSync(motor1Id, motor2Id, steps, speed, directionID) {
+    doSetMotorSpeedDirDistSync(motor1Id, directionID1, motor2Id, directionID2, steps, speed,) {
         if (motor1Id === motor2Id)
             return;
 
@@ -299,12 +299,12 @@ class TxtController {
 
         motor1
             .setSync(motor2.id)
-            .setDirection(directionID)
+            .setDirection(directionID1)
             .setSpeed(speed)
             .setDistanceLimit(steps);
 
         motor2
-            .setDirection(directionID)
+            .setDirection(directionID2)
             .setSpeed(speed)
             .setDistanceLimit(steps);
 
@@ -829,7 +829,7 @@ class Scratch3TxtBlocks {
                     opcode: 'doSetMotorSpeedDirSync',
                     text: formatMessage({
                         id: 'ftxt.doSetMotorSpeedDirSync',
-                        default: 'Move motor [MOTOR_ID] and motor [MOTOR_ID2] with [SPEED] [DIRECTION]',
+                        default: 'Move motor [MOTOR_ID] [DIRECTION] and [MOTOR_ID2] [DIRECTION2] with [SPEED]',
                         description: 'Move the motor by the given values.'
                     }),
                     blockType: BlockType.COMMAND,
@@ -849,6 +849,11 @@ class Scratch3TxtBlocks {
                             menu: 'motorDirection',
                             defaultValue: MotorDirectionEnum.MOTOR_FORWARD
                         },
+                        DIRECTION2: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'motorDirection',
+                            defaultValue: MotorDirectionEnum.MOTOR_FORWARD
+                        },
                         SPEED: {
                             type: ArgumentType.NUMBER,
                             defaultValue: 8,
@@ -861,7 +866,7 @@ class Scratch3TxtBlocks {
                     opcode: 'doSetMotorSpeedDirDistSync',
                     text: formatMessage({
                         id: 'ftxt.doSetMotorSpeedDirDistSync',
-                        default: 'Move motor [MOTOR_ID] and motor [MOTOR_ID2] by [STEPS] steps with [SPEED] [DIRECTION]',
+                        default: 'Move motor [MOTOR_ID] [DIRECTION] and [MOTOR_ID2] [DIRECTION2] by [STEPS] steps with [SPEED]',
                         description: 'Move the motor by the given values.'
                     }),
                     blockType: BlockType.COMMAND,
@@ -877,6 +882,11 @@ class Scratch3TxtBlocks {
                             defaultValue: 1
                         },
                         DIRECTION: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'motorDirection',
+                            defaultValue: MotorDirectionEnum.MOTOR_FORWARD
+                        },
+                        DIRECTION2: {
                             type: ArgumentType.NUMBER,
                             menu: 'motorDirection',
                             defaultValue: MotorDirectionEnum.MOTOR_FORWARD
@@ -898,12 +908,12 @@ class Scratch3TxtBlocks {
                     opcode: 'doStopMotorAndReset',
                     text: formatMessage({
                         id: 'ftxt.doStopMotorAndReset',
-                        default: 'Reset [MOTOR]',
+                        default: 'Reset [MOTOR_ID]',
                         description: 'Stop the motor and reset all synchronizations.'
                     }),
                     blockType: BlockType.COMMAND,
                     arguments: {
-                        MOTOR: {
+                        MOTOR_ID: {
                             type: ArgumentType.NUMBER,
                             menu: 'motorID',
                             defaultValue: 0
@@ -1172,9 +1182,10 @@ class Scratch3TxtBlocks {
     doSetMotorSpeedDirSync(args) {
         return this._device.doSetMotorSpeedDirSync(
             Cast.toNumber(args.MOTOR_ID),
+            Cast.toNumber(args.DIRECTION),
             Cast.toNumber(args.MOTOR_ID2),
-            Cast.toNumber(args.SPEED),
-            Cast.toNumber(args.DIRECTION)
+            Cast.toNumber(args.DIRECTION2),
+            Cast.toNumber(args.SPEED)
         )
     }
 
@@ -1182,10 +1193,11 @@ class Scratch3TxtBlocks {
     doSetMotorSpeedDirDistSync(args) {
         return this._device.doSetMotorSpeedDirDistSync(
             Cast.toNumber(args.MOTOR_ID),
+            Cast.toNumber(args.DIRECTION),
             Cast.toNumber(args.MOTOR_ID2),
+            Cast.toNumber(args.DIRECTION2),
             Cast.toNumber(args.STEPS),
             Cast.toNumber(args.SPEED),
-            Cast.toNumber(args.DIRECTION)
         )
     }
 
