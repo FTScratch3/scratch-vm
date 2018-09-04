@@ -122,7 +122,7 @@ const flatten = function (blocks) {
  * which block they should attach to.
  * @param {int} commentIndex The current index of the top block in this list if it were in a flattened
  * list of all blocks for the target
- * @return {[Array.<object>, int]} Tuple where first item is the Scratch VM-format block list, and
+ * @return {Array<Array.<object>|int>} Tuple where first item is the Scratch VM-format block list, and
  * second item is the updated comment index
  */
 const parseBlockList = function (blockList, addBroadcastMsg, getVariableId, extensions, comments, commentIndex) {
@@ -506,6 +506,22 @@ const parseScratchObject = function (object, runtime, extensions, topLevel, zip)
         parseScripts(object.scripts, blocks, addBroadcastMsg, getVariableId, extensions, blockComments);
     }
 
+    // If there are any comments referring to a numerical block ID, make them
+    // workspace comments. These are comments that were originally created as
+    // block comments, detached from the block, and then had the associated
+    // block deleted.
+    // These comments should be imported as workspace comments
+    // by making their blockIDs (which currently refer to non-existing blocks)
+    // null (See #1452).
+    for (const commentIndex in blockComments) {
+        const currBlockComments = blockComments[commentIndex];
+        currBlockComments.forEach(c => {
+            if (typeof c.blockId === 'number') {
+                c.blockId = null;
+            }
+        });
+    }
+
     // Update stage specific blocks (e.g. sprite clicked <=> stage clicked)
     blocks.updateTargetSpecificBlocks(topLevel); // topLevel = isStage
 
@@ -724,7 +740,7 @@ const specMapBlock = function (block) {
  * which block they should attach to.
  * @param {int} commentIndex The comment index for the block to be parsed if it were in a flattened
  * list of all blocks for the target
- * @return {[object, int]} Tuple where first item is the Scratch VM-format block (or null if unsupported object),
+ * @return {Array.<object|int>} Tuple where first item is the Scratch VM-format block (or null if unsupported object),
  * and second item is the updated comment index (after this block and its children are parsed)
  */
 const parseBlock = function (sb2block, addBroadcastMsg, getVariableId, extensions, comments, commentIndex) {
@@ -816,6 +832,10 @@ const parseBlock = function (sb2block, addBroadcastMsg, getVariableId, extension
                     // Update commentIndex
                     commentIndex = parsedBlockDesc[1];
                 }
+                // Check if innerBlocks is an empty list.
+                // This indicates that all the inner blocks from the sb2 have
+                // unknown opcodes and have been skipped.
+                if (innerBlocks.length === 0) continue;
                 let previousBlock = null;
                 for (let j = 0; j < innerBlocks.length; j++) {
                     if (j === 0) {

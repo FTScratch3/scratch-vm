@@ -240,14 +240,14 @@ class TxtController {
 
     doSetMotorSpeed(motorId, speed) {
         this.getMotorById(motorId)
-            .setSpeed(speed);
+            .setSpeed08(speed);
         this.sendUpdateIfNeeded();
     }
 
     doSetMotorSpeedDir(motorId, speed, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID)
-            .setSpeed(speed);
+            .setSpeed08(speed);
         this.sendUpdateIfNeeded();
     }
 
@@ -261,7 +261,7 @@ class TxtController {
     doSetMotorSpeedDirDist(motorId, steps, speed, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID)
-            .setSpeed(speed)
+            .setSpeed08(speed)
             .setDistanceLimit(steps);
 
         this.sendUpdateIfNeeded();
@@ -280,12 +280,12 @@ class TxtController {
             .setSync(motor2.id)
             .setDirection(directionID1)
             .resetDistanceLimit()
-            .setSpeed(speed);
+            .setSpeed08(speed);
 
         motor2
             .setDirection(directionID2)
             .resetDistanceLimit()
-            .setSpeed(speed);
+            .setSpeed08(speed);
 
         this.sendUpdateIfNeeded();
     }
@@ -300,12 +300,12 @@ class TxtController {
         motor1
             .setSync(motor2.id)
             .setDirection(directionID1)
-            .setSpeed(speed)
+            .setSpeed08(speed)
             .setDistanceLimit(steps);
 
         motor2
             .setDirection(directionID2)
-            .setSpeed(speed)
+            .setSpeed08(speed)
             .setDistanceLimit(steps);
 
         this.sendUpdateIfNeeded();
@@ -316,7 +316,7 @@ class TxtController {
     doStopMotorAndReset(motorId) {
         this.getMotorById(motorId)
             .setSync(MotorSyncEnum.SYNC_NONE)
-            .setSpeed(0)
+            .setSpeed08(0)
             .setDistanceLimit(0);
 
         this.sendUpdateIfNeeded();
@@ -324,7 +324,7 @@ class TxtController {
 
 
     doSetOutputValue(outputID, value) {
-        this.outputs[outputID].setValue(value * 100 / 8);
+        this.outputs[outputID].setValue08(value);
         this.sendUpdateIfNeeded();
     }
 
@@ -956,21 +956,21 @@ class Scratch3TxtBlocks {
                 default: 'Button',
                 description: 'Button'
             }),
-            value: InputDigitalSensorTypes.sens_button
+            value: String(InputDigitalSensorTypes.sens_button)
         }, {
             text: formatMessage({
                 id: 'ftxt.sensor_digital_light_barrier',
                 default: 'Light barrier',
                 description: 'Light barrier'
             }),
-            value: InputDigitalSensorTypes.sens_lightBarrier
+            value: String(InputDigitalSensorTypes.sens_lightBarrier)
         }, {
             text: formatMessage({
                 id: 'ftxt.sensor_digital_reed',
                 default: 'Reed contact',
                 description: 'Reed contact'
             }),
-            value: InputDigitalSensorTypes.sens_reed
+            value: String(InputDigitalSensorTypes.sens_reed)
         }];
     }
 
@@ -981,28 +981,28 @@ class Scratch3TxtBlocks {
                 default: 'Color Sensor',
                 description: 'Color Sensor'
             }),
-            value: InputAnalogSensorTypes.sens_color
+            value: String(InputAnalogSensorTypes.sens_color)
         }, {
             text: formatMessage({
                 id: 'ftxt.sensor_analog_distance',
                 default: 'Distance Sensor',
                 description: 'Distance Sensor'
             }),
-            value: InputAnalogSensorTypes.sens_distance
+            value: String(InputAnalogSensorTypes.sens_distance)
         }, {
             text: formatMessage({
                 id: 'ftxt.sensor_analog_ntc',
                 default: 'NTC Resistor',
                 description: 'NTC Resistor'
             }),
-            value: InputAnalogSensorTypes.sens_ntc
+            value: String(InputAnalogSensorTypes.sens_ntc)
         }, {
             text: formatMessage({
                 id: 'ftxt.sensor_analog_photo',
                 default: 'Photo Resistor',
                 description: 'Photo Resistor'
             }),
-            value: InputAnalogSensorTypes.sens_photo
+            value: String(InputAnalogSensorTypes.sens_photo)
         }];
     }
 
@@ -1013,35 +1013,35 @@ class Scratch3TxtBlocks {
                 default: 'Digital voltage',
                 description: 'Digital voltage'
             }),
-            value: InputModes.mode_d10v
+            value: String(InputModes.mode_d10v)
         }, {
             text: formatMessage({
                 id: 'ftxt.input_mode_d5k',
                 default: 'Digital resistance',
                 description: 'Digital resistance'
             }),
-            value: InputModes.mode_d5k
+            value: String(InputModes.mode_d5k)
         }, {
             text: formatMessage({
                 id: 'ftxt.input_mode_a10v',
                 default: 'Analogue voltage',
                 description: 'Analogue voltage'
             }),
-            value: InputModes.mode_a10v
+            value: String(InputModes.mode_a10v)
         }, {
             text: formatMessage({
                 id: 'ftxt.input_mode_a5k',
                 default: 'Analogue resistance',
                 description: 'Analogue resistance'
             }),
-            value: InputModes.mode_a5k
+            value: String(InputModes.mode_a5k)
         }, {
             text: formatMessage({
                 id: 'ftxt.input_mode_ultrasonic',
                 default: 'Ultrasonic',
                 description: 'Ultrasonic'
             }),
-            value: InputModes.mode_ultrasonic
+            value: String(InputModes.mode_ultrasonic)
         }];
     }
 
@@ -1052,14 +1052,14 @@ class Scratch3TxtBlocks {
                 default: "opens",
                 description: "opens"
             }),
-            value: InputDigitalSensorChangeTypes.button_opens
+            value: String(InputDigitalSensorChangeTypes.button_opens)
         }, {
             text: formatMessage({
                 id: 'ftxt.input_digital_closes',
                 default: "closes",
                 description: "closes"
             }),
-            value: InputDigitalSensorChangeTypes.button_closes
+            value: String(InputDigitalSensorChangeTypes.button_closes)
         }];
     }
 
@@ -1070,14 +1070,14 @@ class Scratch3TxtBlocks {
                 default: "forward",
                 description: "forward"
             }),
-            value: MotorDirectionEnum.MOTOR_FORWARD
+            value: String(MotorDirectionEnum.MOTOR_FORWARD)
         }, {
             text: formatMessage({
                 id: 'ftxt.motor_backwards',
                 default: "backwards",
                 description: "backwards"
             }),
-            value: MotorDirectionEnum.MOTOR_BACKWARDS
+            value: String(MotorDirectionEnum.MOTOR_BACKWARDS)
         }];
     }
 

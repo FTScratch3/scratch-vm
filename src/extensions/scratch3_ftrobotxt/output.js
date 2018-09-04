@@ -22,9 +22,22 @@ class Output {
         this.val = 0;
     }
 
+    setValue08(newValue) {
+        newValue = Math.max(newValue, 0);
+        newValue = Math.min(newValue, 8);
+
+        return this.setValue(newValue * 100 / 8)
+    }
+
     setValue(newValue) {
+        newValue = Math.max(newValue, 0);
+        newValue = Math.min(newValue, 100);
+
+        if (this.val !== newValue)
+            this.modified();
+
         this.val = newValue;
-        this.modified();
+        return this;
     }
 
     modified() {

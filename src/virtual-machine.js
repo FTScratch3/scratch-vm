@@ -148,6 +148,11 @@ class VirtualMachine extends EventEmitter {
      */
     setTurboMode (turboModeOn) {
         this.runtime.turboMode = !!turboModeOn;
+        if (this.runtime.turboMode) {
+            this.emit(Runtime.TURBO_MODE_ON);
+        } else {
+            this.emit(Runtime.TURBO_MODE_OFF);
+        }
     }
 
     /**
@@ -523,15 +528,22 @@ class VirtualMachine extends EventEmitter {
      * @property {number} rotationCenterX - the X component of the costume's origin.
      * @property {number} rotationCenterY - the Y component of the costume's origin.
      * @property {number} [bitmapResolution] - the resolution scale for a bitmap costume.
+     * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @returns {?Promise} - a promise that resolves when the costume has been added
      */
-    addCostume (md5ext, costumeObject) {
-        return loadCostume(md5ext, costumeObject, this.runtime).then(() => {
-            this.editingTarget.addCostume(costumeObject);
-            this.editingTarget.setCostume(
-                this.editingTarget.getCostumes().length - 1
-            );
-        });
+    addCostume (md5ext, costumeObject, optTargetId) {
+        const target = optTargetId ? this.runtime.getTargetById(optTargetId) :
+            this.editingTarget;
+        if (target) {
+            return loadCostume(md5ext, costumeObject, this.runtime).then(() => {
+                target.addCostume(costumeObject);
+                target.setCostume(
+                    target.getCostumes().length - 1
+                );
+            });
+        }
+        // If the target cannot be found by id, return a rejected promise
+        return new Promise.reject();
     }
 
     /**
@@ -577,21 +589,38 @@ class VirtualMachine extends EventEmitter {
     /**
      * Delete a costume from the current editing target.
      * @param {int} costumeIndex - the index of the costume to be removed.
+     * @return {?function} A function to restore the deleted costume, or null,
+     * if no costume was deleted.
      */
     deleteCostume (costumeIndex) {
-        this.editingTarget.deleteCostume(costumeIndex);
+        const deletedCostume = this.editingTarget.deleteCostume(costumeIndex);
+        if (deletedCostume) {
+            const target = this.editingTarget;
+            return () => {
+                target.addCostume(deletedCostume);
+                this.emitTargetsUpdate();
+            };
+        }
+        return null;
     }
 
     /**
      * Add a sound to the current editing target.
      * @param {!object} soundObject Object representing the costume.
+     * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @returns {?Promise} - a promise that resolves when the sound has been decoded and added
      */
-    addSound (soundObject) {
-        return loadSound(soundObject, this.runtime, this.editingTarget.sprite).then(() => {
-            this.editingTarget.addSound(soundObject);
-            this.emitTargetsUpdate();
-        });
+    addSound (soundObject, optTargetId) {
+        const target = optTargetId ? this.runtime.getTargetById(optTargetId) :
+            this.editingTarget;
+        if (target) {
+            return loadSound(soundObject, this.runtime, target.sprite).then(() => {
+                target.addSound(soundObject);
+                this.emitTargetsUpdate();
+            });
+        }
+        // If the target cannot be found by id, return a rejected promise
+        return new Promise.reject();
     }
 
     /**
@@ -656,9 +685,20 @@ class VirtualMachine extends EventEmitter {
     /**
      * Delete a sound from the current editing target.
      * @param {int} soundIndex - the index of the sound to be removed.
+     * @return {?Function} A function to restore the sound that was deleted,
+     * or null, if no sound was deleted.
      */
     deleteSound (soundIndex) {
-        this.editingTarget.deleteSound(soundIndex);
+        const target = this.editingTarget;
+        const deletedSound = this.editingTarget.deleteSound(soundIndex);
+        if (deletedSound) {
+            const restoreFun = () => {
+                target.addSound(deletedSound);
+                this.emitTargetsUpdate();
+            };
+            return restoreFun;
+        }
+        return null;
     }
 
     /**
@@ -817,6 +857,7 @@ class VirtualMachine extends EventEmitter {
     /**
      * Delete a sprite and all its clones.
      * @param {string} targetId ID of a target whose sprite to delete.
+     * @return {Function} Returns a function to restore the sprite that was deleted
      */
     deleteSprite (targetId) {
         const target = this.runtime.getTargetById(targetId);
@@ -830,7 +871,16 @@ class VirtualMachine extends EventEmitter {
             if (!sprite) {
                 throw new Error('No sprite associated with this target.');
             }
+            const spritePromise = this.exportSprite(targetId, 'uint8array');
+            const restoreSprite = () => spritePromise.then(spriteBuffer => this.addSprite(spriteBuffer));
+            // Remove monitors from the runtime state and remove the
+            // target-specific monitored blocks (e.g. local variables)
             this.runtime.requestRemoveMonitorByTargetId(targetId);
+            const targetSpecificMonitorBlockIds = Object.keys(this.runtime.monitorBlocks._blocks)
+                .filter(key => this.runtime.monitorBlocks._blocks[key].targetId === targetId);
+            for (const blockId of targetSpecificMonitorBlockIds) {
+                this.runtime.monitorBlocks.deleteBlock(blockId);
+            }
             const currentEditingTarget = this.editingTarget;
             for (let i = 0; i < sprite.clones.length; i++) {
                 const clone = sprite.clones[i];
@@ -848,9 +898,10 @@ class VirtualMachine extends EventEmitter {
             }
             // Sprite object should be deleted by GC.
             this.emitTargetsUpdate();
-        } else {
-            throw new Error('No target with the provided id.');
+            return restoreSprite;
         }
+
+        throw new Error('No target with the provided id.');
     }
 
     /**
@@ -917,8 +968,8 @@ class VirtualMachine extends EventEmitter {
 
     /**
      * set the current locale and builtin messages for the VM
-     * @param {[type]} locale       current locale
-     * @param {[type]} messages     builtin messages map for current locale
+     * @param {!string} locale       current locale
+     * @param {!object} messages     builtin messages map for current locale
      * @returns {Promise} Promise that resolves when all the blocks have been
      *     updated for a new locale (or empty if locale hasn't changed.)
      */

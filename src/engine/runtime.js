@@ -41,7 +41,7 @@ const defaultBlockPackages = {
 
 /**
  * Information used for converting Scratch argument types into scratch-blocks data.
- * @type {object.<ArgumentType, {shadowType: string, fieldType: string}>}}
+ * @type {object.<ArgumentType, {shadowType: string, fieldType: string}>}
  */
 const ArgumentTypeMap = (() => {
     const map = {};
@@ -127,14 +127,14 @@ class Runtime extends EventEmitter {
          * These will execute on `_editingTarget.`
          * @type {!Blocks}
          */
-        this.flyoutBlocks = new Blocks();
+        this.flyoutBlocks = new Blocks(true /* force no glow */);
 
         /**
          * Storage container for monitor blocks.
          * These will execute on a target maybe
          * @type {!Blocks}
          */
-        this.monitorBlocks = new Blocks();
+        this.monitorBlocks = new Blocks(true /* force no glow */);
 
         /**
          * Currently known editing target for the VM.
@@ -320,6 +320,22 @@ class Runtime extends EventEmitter {
      */
     static get BLOCK_GLOW_OFF () {
         return 'BLOCK_GLOW_OFF';
+    }
+
+    /**
+     * Event name for turning on turbo mode.
+     * @const {string}
+     */
+    static get TURBO_MODE_ON () {
+        return 'TURBO_MODE_ON';
+    }
+
+    /**
+     * Event name for turning off turbo mode.
+     * @const {string}
+     */
+    static get TURBO_MODE_OFF () {
+        return 'TURBO_MODE_OFF';
     }
 
     /**

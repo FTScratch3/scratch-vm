@@ -84,6 +84,8 @@ class Motor {
     }
 
     setDistanceLimit(newDist) {
+        newDist = Math.max(0, newDist);
+
         const changed = this.dist !== newDist;
         this.dist = newDist;
         if (changed) this.modified();
@@ -104,11 +106,22 @@ class Motor {
     }
 
     setSpeed(newSpeed) {
+        newSpeed = Math.max(newSpeed, 0);
+        newSpeed = Math.min(newSpeed, 100);
+
         const changed = this.speed !== newSpeed;
-        this.speed = newSpeed * 100 / 8;
+        this.speed = newSpeed;
         if (changed) this.modified();
 
         return this;
+    }
+
+    setSpeed08(newSpeed) {
+        newSpeed = Math.max(newSpeed, 0);
+        newSpeed = Math.min(newSpeed, 8);
+        newSpeed = newSpeed * 100 / 8;
+
+        return this.setSpeed(newSpeed);
     }
 }
 

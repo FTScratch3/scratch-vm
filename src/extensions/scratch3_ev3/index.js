@@ -1,6 +1,7 @@
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
+const formatMessage = require('format-message');
 const uid = require('../../util/uid');
 // const log = require('../../util/log');
 const Base64Util = require('../../util/base64-util');
@@ -121,7 +122,7 @@ class EV3 {
          * @private
          */
         this._runtime = runtime;
-        this._runtime.on('PROJECT_STOP_ALL', this._stopAllMotors.bind(this));
+        this._runtime.on('PROJECT_STOP_ALL', this._stopAll.bind(this));
 
         /**
          * State
@@ -250,11 +251,11 @@ class EV3 {
         cmd[1] = 0; // 0x00
         cmd[2] = 0; // 0x00
         cmd[3] = 0; // 0x00
-        cmd[4] = 128; // 0x80
+        cmd[4] = 128; // 0x80 // Direct command, reply not require
         cmd[5] = 0; // 0x00
         cmd[6] = 0; // 0x00
-        cmd[7] = 148; // 0x94 op sound
-        cmd[8] = 1; // 0x01 tone
+        cmd[7] = 148; // 0x94 op: sound
+        cmd[8] = 1; // 0x01 cmd: tone
         cmd[9] = 129; // 0x81 volume following in 1 byte
         cmd[10] = 2; // volume byte 1
         cmd[11] = 130; // 0x82 frequency following in 2 bytes
@@ -295,9 +296,6 @@ class EV3 {
             message: Base64Util.arrayBufferToBase64(cmd),
             encoding: 'base64'
         });
-
-        // Set motor to busy
-        // this._motors.busy[port] = 1;
 
         this.coastAfter(port, time);
 
@@ -354,10 +352,11 @@ class EV3 {
                 this.motorCoast(port);
                 this._motors.commandId[port] = null;
             }
-        }, time);
+        }, time + 1000); // add a 1 second delay so the brake takes effect
     }
 
     motorCoast (port) {
+        if (!this.getPeripheralIsConnected()) return;
 
         const cmd = [];
         cmd[0] = 9; // length
@@ -465,6 +464,31 @@ class EV3 {
     // *******
     // PRIVATE
     // *******
+
+    _stopAll () {
+        this._stopAllMotors();
+        this._stopSound();
+    }
+
+    _stopSound () {
+        if (!this.getPeripheralIsConnected()) return;
+
+        const cmd = [];
+        cmd[0] = 7; // Command size, Little Endian. Command size not including these 2 bytes
+        cmd[1] = 0; // Command size, Little Endian. Command size not including these 2 bytes
+        cmd[2] = 0; // Message counter, Little Endian. Forth running counter
+        cmd[3] = 0; // Message counter, Little Endian. Forth running counter
+        cmd[4] = 128; // 0x80 // Command type. See defines above : Direct command, reply not require
+        cmd[5] = 0; // Reservation (allocation) of global and local variables
+        cmd[6] = 0; // Reservation (allocation) of global and local variables
+        cmd[7] = 148; // 0x94 op: sound
+        cmd[8] = 0; // 0x00 cmd: break 0x00 (Stop current sound playback)
+
+        this._bt.sendMessage({
+            message: Base64Util.arrayBufferToBase64(cmd),
+            encoding: 'base64'
+        });
+    }
 
     _stopAllMotors () {
         for (let i = 0; i < this._motorPorts.length; i++) {
@@ -828,7 +852,11 @@ class Scratch3Ev3Blocks {
             blocks: [
                 {
                     opcode: 'motorTurnClockwise',
-                    text: 'motor [PORT] turn this way for [TIME] seconds',
+                    text: formatMessage({
+                        id: 'ev3.motorTurnClockwise',
+                        default: 'motor [PORT] turn this way for [TIME] seconds',
+                        description: 'turn a motor clockwise for some time'
+                    }),
                     blockType: BlockType.COMMAND,
                     arguments: {
                         PORT: {
@@ -844,7 +872,11 @@ class Scratch3Ev3Blocks {
                 },
                 {
                     opcode: 'motorTurnCounterClockwise',
-                    text: 'motor [PORT] turn that way for [TIME] seconds',
+                    text: formatMessage({
+                        id: 'ev3.motorTurnCounterClockwise',
+                        default: 'motor [PORT] turn that way for [TIME] seconds',
+                        description: 'turn a motor counter-clockwise for some time'
+                    }),
                     blockType: BlockType.COMMAND,
                     arguments: {
                         PORT: {
@@ -892,7 +924,11 @@ class Scratch3Ev3Blocks {
                 }, */
                 {
                     opcode: 'motorSetPower',
-                    text: 'motor [PORT] set power [POWER] %',
+                    text: formatMessage({
+                        id: 'ev3.motorSetPower',
+                        default: 'motor [PORT] set power [POWER] %',
+                        description: 'set a motor\'s power to some value'
+                    }),
                     blockType: BlockType.COMMAND,
                     arguments: {
                         PORT: {
@@ -908,7 +944,11 @@ class Scratch3Ev3Blocks {
                 },
                 {
                     opcode: 'getMotorPosition',
-                    text: 'motor [PORT] position',
+                    text: formatMessage({
+                        id: 'ev3.getMotorPosition',
+                        default: 'motor [PORT] position',
+                        description: 'get the measured degrees a motor has turned'
+                    }),
                     blockType: BlockType.REPORTER,
                     arguments: {
                         PORT: {
@@ -920,7 +960,11 @@ class Scratch3Ev3Blocks {
                 },
                 {
                     opcode: 'whenButtonPressed',
-                    text: 'when button [PORT] pressed',
+                    text: formatMessage({
+                        id: 'ev3.whenButtonPressed',
+                        default: 'when button [PORT] pressed',
+                        description: 'when a button connected to a port is pressed'
+                    }),
                     blockType: BlockType.HAT,
                     arguments: {
                         PORT: {
@@ -932,7 +976,11 @@ class Scratch3Ev3Blocks {
                 },
                 {
                     opcode: 'whenDistanceLessThan',
-                    text: 'when distance < [DISTANCE]',
+                    text: formatMessage({
+                        id: 'ev3.whenDistanceLessThan',
+                        default: 'when distance < [DISTANCE]',
+                        description: 'when the value measured by the distance sensor is less than some value'
+                    }),
                     blockType: BlockType.HAT,
                     arguments: {
                         DISTANCE: {
@@ -943,7 +991,11 @@ class Scratch3Ev3Blocks {
                 },
                 {
                     opcode: 'whenBrightnessLessThan',
-                    text: 'when brightness < [DISTANCE]',
+                    text: formatMessage({
+                        id: 'ev3.whenBrightnessLessThan',
+                        default: 'when brightness < [DISTANCE]',
+                        description: 'when value measured by brightness sensor is less than some value'
+                    }),
                     blockType: BlockType.HAT,
                     arguments: {
                         DISTANCE: {
@@ -954,7 +1006,11 @@ class Scratch3Ev3Blocks {
                 },
                 {
                     opcode: 'buttonPressed',
-                    text: 'button [PORT] pressed?',
+                    text: formatMessage({
+                        id: 'ev3.buttonPressed',
+                        default: 'button [PORT] pressed?',
+                        description: 'is a button on some port pressed?'
+                    }),
                     blockType: BlockType.BOOLEAN,
                     arguments: {
                         PORT: {
@@ -966,17 +1022,29 @@ class Scratch3Ev3Blocks {
                 },
                 {
                     opcode: 'getDistance',
-                    text: 'distance',
+                    text: formatMessage({
+                        id: 'ev3.getDistance',
+                        default: 'distance',
+                        description: 'gets measured distance'
+                    }),
                     blockType: BlockType.REPORTER
                 },
                 {
                     opcode: 'getBrightness',
-                    text: 'brightness',
+                    text: formatMessage({
+                        id: 'ev3.getBrightness',
+                        default: 'brightness',
+                        description: 'gets measured brightness'
+                    }),
                     blockType: BlockType.REPORTER
                 },
                 {
                     opcode: 'beep',
-                    text: 'beep note [NOTE] for [TIME] secs',
+                    text: formatMessage({
+                        id: 'ev3.beepNote',
+                        default: 'beep note [NOTE] for [TIME] secs',
+                        description: 'play some note on EV3 for some time'
+                    }),
                     blockType: BlockType.COMMAND,
                     arguments: {
                         NOTE: {

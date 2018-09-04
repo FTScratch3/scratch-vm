@@ -103,14 +103,33 @@ class BLESession extends JSONRPCWebSocket {
     }
 
     /**
-     * Start reading from the specified ble service.
+     * Start receiving notifications from the specified ble service.
+     * @param {number} serviceId - the ble service to read.
+     * @param {number} characteristicId - the ble characteristic to get notifications from.
+     * @param {object} onCharacteristicChanged - callback for characteristic change notifications.
+     * @return {Promise} - a promise from the remote startNotifications request.
+     */
+    startNotifications (serviceId, characteristicId, onCharacteristicChanged = null) {
+        const params = {
+            serviceId,
+            characteristicId
+        };
+        this._characteristicDidChangeCallback = onCharacteristicChanged;
+        return this.sendRemoteRequest('startNotifications', params)
+            .catch(e => {
+                this._sendError(e);
+            });
+    }
+
+    /**
+     * Read from the specified ble service.
      * @param {number} serviceId - the ble service to read.
      * @param {number} characteristicId - the ble characteristic to read.
      * @param {boolean} optStartNotifications - whether to start receiving characteristic change notifications.
      * @param {object} onCharacteristicChanged - callback for characteristic change notifications.
      * @return {Promise} - a promise from the remote read request.
      */
-    read (serviceId, characteristicId, optStartNotifications = false, onCharacteristicChanged) {
+    read (serviceId, characteristicId, optStartNotifications = false, onCharacteristicChanged = null) {
         const params = {
             serviceId,
             characteristicId
@@ -131,12 +150,16 @@ class BLESession extends JSONRPCWebSocket {
      * @param {number} characteristicId - the ble characteristic to write.
      * @param {string} message - the message to send.
      * @param {string} encoding - the message encoding type.
+     * @param {boolean} withResponse - if true, resolve after peripheral's response.
      * @return {Promise} - a promise from the remote send request.
      */
-    write (serviceId, characteristicId, message, encoding = null) {
+    write (serviceId, characteristicId, message, encoding = null, withResponse = null) {
         const params = {serviceId, characteristicId, message};
         if (encoding) {
             params.encoding = encoding;
+        }
+        if (withResponse) {
+            params.withResponse = withResponse;
         }
         return this.sendRemoteRequest('write', params)
             .catch(e => {
@@ -145,7 +168,7 @@ class BLESession extends JSONRPCWebSocket {
     }
 
     _sendError (/* e */) {
-        this._connected = false;
+        this.disconnectSession();
         // log.error(`BLESession error: ${JSON.stringify(e)}`);
         this._runtime.emit(this._runtime.constructor.PERIPHERAL_ERROR);
     }

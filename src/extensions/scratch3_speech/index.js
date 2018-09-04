@@ -82,7 +82,8 @@ class Scratch3SpeechBlocks {
         this._currentUtterance = '';
 
         /**
-         *  Similar to _currentUtterance, but set back to '' at the beginning of listening block.
+         *  Similar to _currentUtterance, but set back to '' at the beginning of listening block
+         *  and on green flag.
          *  Used to get the hat blocks to edge trigger.  In order to detect someone saying
          *  the same thing twice in two subsequent listen and wait blocks
          *  and still trigger the hat, we need this to go from
@@ -188,6 +189,7 @@ class Scratch3SpeechBlocks {
 
 
         this.runtime.on('PROJECT_STOP_ALL', this._resetListening.bind(this));
+        this.runtime.on('PROJECT_START', this._resetEdgeTriggerUtterance.bind(this));
 
         // Load in the start and stop listening indicator sounds.
         this._loadUISounds();
@@ -293,6 +295,15 @@ class Scratch3SpeechBlocks {
         this._stopListening();
         this._closeWebsocket();
         this._resolveSpeechPromises();
+    }
+
+    /**
+     * Reset the utterance we look for in the when I hear hat block back to
+     * the empty string.
+     * @private
+     */
+    _resetEdgeTriggerUtterance () {
+        this._utteranceForEdgeTrigger = '';
     }
 
     /**
@@ -512,12 +523,7 @@ class Scratch3SpeechBlocks {
      * @private
      */
     _startListening () {
-        // If we've already setup the context, we can resume instead of doing all the setup again.
-        if (this._context) {
-            this._resumeListening();
-        } else {
-            this._initListening();
-        }
+        this._initListening();
         // Force the block to timeout if we don't get any results back/the user didn't say anything.
         this._speechTimeoutId = setTimeout(this._stopTranscription, listenAndWaitBlockTimeoutMs);
     }
@@ -547,18 +553,18 @@ class Scratch3SpeechBlocks {
      * @private
      */
     _initializeMicrophone () {
-        // Safari still needs a webkit prefix for audio context
-        this._context = new (window.AudioContext || window.webkitAudioContext)();
+        // Don't make a new context if we already made one.
+        if (!this._context) {
+            // Safari still needs a webkit prefix for audio context
+            this._context = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        // In safari we have to call getUserMedia every time we want to listen. Other browsers allow
+        // you to reuse the mediaStream.  See #1202 for more context.
         this._audioPromise = navigator.mediaDevices.getUserMedia({
             audio: true
         });
 
-        const tempContext = this._context;
-        this._audioPromise.then(micStream => {
-            const microphone = tempContext.createMediaStreamSource(micStream);
-            const analyser = tempContext.createAnalyser();
-            microphone.connect(analyser);
-        }).catch(e => {
+        this._audioPromise.then().catch(e => {
             log.error(`Problem connecting to microphone:  ${e}`);
         });
     }
@@ -743,7 +749,7 @@ class Scratch3SpeechBlocks {
         // TODO: Question - Should we only play the sound if listening isn't already in progress?
         return this._playSound(this._startSoundPlayer).then(() => {
             this._phraseList = this._scanBlocksForPhraseList();
-            this._utteranceForEdgeTrigger = '';
+            this._resetEdgeTriggerUtterance();
             
             const endSound = (shouldPlayEndSound => {
                 if (shouldPlayEndSound) {
