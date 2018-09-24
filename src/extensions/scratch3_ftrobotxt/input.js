@@ -65,8 +65,9 @@ const InputDigitalSensorChangeTypes = {
 };
 
 class Input extends TxtInput {
-    constructor() {
+    constructor(id) {
         super();
+        this.idx = id;
         this.mod = false;		// input was changed?
         this.mode = -1;			// start with "unknown"
     }
@@ -97,8 +98,6 @@ class Input extends TxtInput {
             case InputAnalogSensorTypes.sens_ntc:
             case InputAnalogSensorTypes.sens_photo:
                 return this.setMode(3);
-            case InputAnalogSensorTypes.sens_distance:
-                return this.setMode(4);
             default:
                 return this.setMode(-1)
         }

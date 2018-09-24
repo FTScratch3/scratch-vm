@@ -2,27 +2,27 @@ const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const formatMessage = require('format-message');
-import {ftxtSession, ScratchLinkWebSocketTXT} from "../../io/ftxtSession";
-import {Motor, MotorDirectionEnum, MotorSyncEnum} from "./motor";
+import {ftxtSession, ScratchLinkWebSocketBTSmart} from "../../io/ftxtSession";
+import {Motor, MotorDirectionEnum, MotorSyncEnum} from "../scratch3_ftrobotxt/motor";
 import {Output, OutputID} from "./output";
-import {Counter, CounterID} from "./counter";
 import {
     Input, InputID, InputModes, InputAnalogSensorTypes,
     InputDigitalSensorTypes, InputDigitalSensorChangeTypes,
-} from "./input";
-import txtImageSmall from './txt_controller_small.png';
+} from "../scratch3_ftrobotxt/input";
+
+import btsmartImageSmall from './btsmart_small.png';
 // TODO: Grafiken
 
 /**
  * Manage communication with a WeDo 2.0 device over a Device Manager client socket.
  */
-class TxtController {
+class BTController {
 
     /**
      * @return {string} - the type of Device Manager device socket that this class will handle.
      */
     static get DEVICE_TYPE() {
-        return 'txt';
+        return 'btsmart';
     }
 
     /**
@@ -39,28 +39,11 @@ class TxtController {
         this._runtime = runtime;
         this._runtime.on('PROJECT_STOP_ALL', this.reset.bind(this));
 
-        /**
-         * Callbacks used to wait for motor input
-         * @type {Array}
-         * @private
-         */
-        this._motorWaitCallbacks = [];
-        this._soundCallback = null;
-
-        this.motors = [
-            new Motor(0), new Motor(1), new Motor(2), new Motor(3),
-        ];
         this.outputs = [
-            new Output(0), new Output(1), new Output(2), new Output(3),
-            new Output(4), new Output(5), new Output(6), new Output(7),
+            new Output(0), new Output(1)
         ];
         this.inputs = [
-            new Input(0), new Input(1), new Input(2), new Input(3),
-            new Input(4), new Input(5), new Input(6), new Input(7),
-        ];
-
-        this.counters = [
-            new Counter(0), new Counter(1), new Counter(2), new Counter(3)
+            new Input(0), new Input(1), new Input(2), new Input(3), new Input(4)
         ];
 
 
@@ -75,10 +58,10 @@ class TxtController {
 
     startDeviceScan() {
         this._socket = new ftxtSession(this._runtime,
-            ScratchLinkWebSocketTXT,
+            ScratchLinkWebSocketBTSmart,
             () => this._onSessionConnect(),
             message => this.onSensData(message),
-            () => this.onSoundDone()
+            () => console.error("Received on sound done. But BTSmart has no sounds ôo")
         );
     }
 
@@ -93,37 +76,23 @@ class TxtController {
     checkIfUpdateIsNeeded() {
         let needsUpdate = false;
 
-        for (let motor of this.motors) needsUpdate |= motor.mod;
         for (let output of this.outputs) needsUpdate |= output.mod;
         for (let input of this.inputs) needsUpdate |= input.mod;
-        for (let counter of this.counters) needsUpdate |= counter.mod;
 
         return needsUpdate;
     }
 
     sendUpdateIfNeeded() {
-        if (this.checkIfUpdateIsNeeded()) {
-            this._socket.sendJsonMessage("ACTU", {
-                motors: this.motors,
-                outputs: this.outputs,
-                inputs: this.inputs,
-                counters: this.counters
-            });
-
-            // Reset "mod" state
-            for (let motor of this.motors) motor.transmitted();
-            for (let input of this.inputs) input.transmitted();
-            for (let output of this.outputs) output.transmitted();
-            for (let counter of this.counters) counter.transmitted();
+        for (let output of this.outputs) {
+            if (output.mod) {
+                this._socket.sendJsonMessage("SETO", output);
+                output.transmitted();
+            }
         }
-    }
-
-    checkCallbacks() {
-        for (let idx in this._motorWaitCallbacks) {
-            let func = this._motorWaitCallbacks[idx];
-            if (func()) {
-                // remove the entry
-                this._motorWaitCallbacks.splice(idx, 1);
+        for (let input of this.inputs) {
+            if (input.mod) {
+                this._socket.sendJsonMessage("CFGI", input);
+                input.transmitted();
             }
         }
     }
@@ -131,25 +100,15 @@ class TxtController {
     // events
 
     onSensData(message) {
-        for (let n = 0; n < 8; n++) {
+        console.log("onSensData", {message});
+        for (let n = 0; n < 5; n++) {
             this.inputs[n].setNewValue(message.inputs[n]);
-        }
-        for (let n = 0; n < 4; n++) {
-            this.counters[n].setNewValue(message.counters[n]);
         }
 
         this.onNewData();
     }
 
-    onSoundDone() {
-        if (this._soundCallback) {
-            this._soundCallback();
-            this._soundCallback = null;
-        }
-    }
-
     onNewData() {
-        this.checkCallbacks();
     }
 
     /**
@@ -165,22 +124,13 @@ class TxtController {
     }
 
     // Getter
-    /**
-     * @param {number} id
-     * @returns {Counter|null}
-     */
-    getCounterById(id) {
-        if (id < 0 || id > 3)
-            return null;
-        return this.counters[id];
-    }
 
     /**
      * @param {number} id
      * @returns {Input|null}
      */
     getInputById(id) {
-        if (id < 0 || id > 7)
+        if (id < 0 || id > 3)
             return null;
         return this.inputs[id];
     }
@@ -190,51 +140,9 @@ class TxtController {
      * @returns {Motor|null}
      */
     getMotorById(id) {
-        if (id < 0 || id > 3)
+        if (id < 0 || id > 1)
             return null;
-        return this.motors[id];
-    }
-
-    waitForMotorCallback(motorId, steps) {
-        return new Promise(resolve => {
-            let counter = this.getCounterById(motorId);
-            let check = () => {
-                if (counter.value >= steps) {
-                    resolve();
-                    return true;
-                }
-                return false;
-            };
-            setTimeout(() => {
-                this._motorWaitCallbacks.push(check);
-            }, 150);
-        });
-    }
-
-    doPlaySound(soundID) {
-        this._socket.sendJsonMessage("PLAY", {idx: soundID});
-    }
-
-    doPlaySoundAndWait(soundID) {
-        return new Promise(resolve => {
-            if (this._soundCallback !== null) {
-                resolve();
-                return;
-            }
-            this._soundCallback = () => {
-                this._soundCallback = null;
-                resolve();
-            };
-            this._socket.sendJsonMessage("PLAY", {idx: soundID});
-        });
-    }
-
-    setMotorSync(motor1Id, motor2Id) {
-        this.getMotorById(motor1Id).setSync(motor2Id);
-    }
-
-    setMotorSyncNone(motorId) {
-        this.getMotorById(motorId).resetSync();
+        return this.outputs[id];
     }
 
     doSetMotorSpeed(motorId, speed) {
@@ -257,78 +165,8 @@ class TxtController {
     }
 
     // Methods for blocks
-    doSetMotorSpeedDirDist(motorId, steps, speed, directionID) {
-        this.getMotorById(motorId)
-            .setDirection(directionID)
-            .setSpeed08(speed)
-            .setDistanceLimit(steps);
-
-        this.sendUpdateIfNeeded();
-
-        return this.waitForMotorCallback(motorId, steps);
-    }
-
-    doSetMotorSpeedDirSync(motor1Id, directionID1, motor2Id, directionID2, speed) {
-        if (motor1Id === motor2Id)
-            return;
-
-        let motor1 = this.getMotorById(motor1Id);
-        let motor2 = this.getMotorById(motor2Id);
-
-        motor1
-            .setSync(motor2.id)
-            .setDirection(directionID1)
-            .resetDistanceLimit()
-            .setSpeed08(speed);
-
-        motor2
-            .setDirection(directionID2)
-            .resetDistanceLimit()
-            .setSpeed08(speed);
-
-        this.sendUpdateIfNeeded();
-    }
-
-    doSetMotorSpeedDirDistSync(motor1Id, directionID1, motor2Id, directionID2, steps, speed,) {
-        if (motor1Id === motor2Id)
-            return;
-
-        let motor1 = this.getMotorById(motor1Id);
-        let motor2 = this.getMotorById(motor2Id);
-
-        motor1
-            .setSync(motor2.id)
-            .setDirection(directionID1)
-            .setSpeed08(speed)
-            .setDistanceLimit(steps);
-
-        motor2
-            .setDirection(directionID2)
-            .setSpeed08(speed)
-            .setDistanceLimit(steps);
-
-        this.sendUpdateIfNeeded();
-
-        return this.waitForMotorCallback(motor1.id, steps);
-    }
-
-    doStopMotorAndReset(motorId) {
-        this.getMotorById(motorId)
-            .setSync(MotorSyncEnum.SYNC_NONE)
-            .setSpeed08(0)
-            .setDistanceLimit(0);
-
-        this.sendUpdateIfNeeded();
-    }
-
-
     doSetOutputValue(outputID, value) {
         this.outputs[outputID].setValue08(value);
-        this.sendUpdateIfNeeded();
-    }
-
-    doResetCounter(counterID) {
-        this.getCounterById(counterID).doReset();
         this.sendUpdateIfNeeded();
     }
 
@@ -366,19 +204,6 @@ class TxtController {
             return false;
     }
 
-    onCounter(counterID, operator, value) {
-        let counter = this.getCounterById(counterID);
-        if (operator === '>') {
-            return !(counter.oldValue > value) && counter.value > value;
-        } else if (operator === '<') {
-            return !(counter.oldValue < value) && counter.value < value;
-        } else if (operator === '=') {
-            return !(counter.oldValue === value) && counter.value === value;
-        } else {
-            console.error("Invalid operator: " + operator)
-        }
-    }
-
     onInput(inputId, sensorType, operator, value) {
         let input = this.getInputById(inputId);
         input.adjustAnalogInputMode(inputId);
@@ -406,13 +231,13 @@ class TxtController {
 /**
  * Scratch 3.0 blocks to interact with a LEGO WeDo 2.0 device.
  */
-class Scratch3TxtBlocks {
+class Scratch3BTSmartBlocks {
 
     /**
      * @return {string} - the ID of this extension.
      */
     static get EXTENSION_ID() {
-        return 'ftxt';
+        return 'ftbtsmart';
     }
 
     /**
@@ -437,9 +262,9 @@ class Scratch3TxtBlocks {
      */
     getInfo() {
         return {
-            id: Scratch3TxtBlocks.EXTENSION_ID,
-            name: 'TXT-Controller',
-            blockIconURI: txtImageSmall,
+            id: Scratch3BTSmartBlocks.EXTENSION_ID,
+            name: 'BTSmart',
+            blockIconURI: btsmartImageSmall,
             showStatusButton: true,
             blocks: [
                 // EVENTS
@@ -470,32 +295,6 @@ class Scratch3TxtBlocks {
                     }
                 },
                 {
-                    opcode: 'onCounter',
-                    text: formatMessage({
-                        id: 'ftxt.onCounter',
-                        default: 'If counter [COUNTER_ID] [OPERATOR] [VALUE]',
-                        description: 'check when a certain counter changes its value'
-                    }),
-                    blockType: BlockType.HAT,
-                    arguments: {
-                        COUNTER_ID: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'counterID',
-                            defaultValue: CounterID.C1
-                        },
-                        OPERATOR: {
-                            type: ArgumentType.STRING,
-                            menu: 'compares',
-                            defaultValue: '>'
-                        },
-                        VALUE: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 100,
-                            minValue: 0
-                        }
-                    }
-                },
-                {
                     opcode: 'onInput',
                     text: formatMessage({
                         id: 'ftxt.onInput',
@@ -507,7 +306,7 @@ class Scratch3TxtBlocks {
                         SENSOR: {
                             type: ArgumentType.NUMBER,
                             menu: 'inputAnalogSensorTypes',
-                            defaultValue: InputAnalogSensorTypes.sens_distance
+                            defaultValue: InputAnalogSensorTypes.sens_color
                         },
                         INPUT: {
                             type: ArgumentType.NUMBER,
@@ -531,22 +330,6 @@ class Scratch3TxtBlocks {
                 // GETTER
 
                 {
-                    opcode: 'getCounter',
-                    text: formatMessage({
-                        id: 'ftxt.getCounter',
-                        default: 'Get value of counter [COUNTER_ID]',
-                        description: 'get the value of a counter'
-                    }),
-                    blockType: BlockType.REPORTER,
-                    arguments: {
-                        COUNTER_ID: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'counterID',
-                            defaultValue: CounterID.C1
-                        },
-                    }
-                },
-                {
                     opcode: 'getSensor',
                     text: formatMessage({
                         id: 'ftxt.getSensor',
@@ -558,7 +341,7 @@ class Scratch3TxtBlocks {
                         SENSOR: {
                             type: ArgumentType.NUMBER,
                             menu: 'inputAnalogSensorTypes',
-                            defaultValue: InputAnalogSensorTypes.sens_distance
+                            defaultValue: InputAnalogSensorTypes.sens_ntc
                         },
                         INPUT: {
                             type: ArgumentType.NUMBER,
@@ -590,38 +373,6 @@ class Scratch3TxtBlocks {
                 },
 
                 // SETTER
-                {
-                    opcode: 'doPlaySound',
-                    text: formatMessage({
-                        id: 'ftxt.doPlaySound',
-                        default: 'Play sound [NUM]',
-                        description: 'Play a sound'
-                    }),
-                    blockType: BlockType.COMMAND,
-                    arguments: {
-                        NUM: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 1,
-                            maxValue: 29
-                        }
-                    }
-                },
-                {
-                    opcode: 'doPlaySoundWait',
-                    text: formatMessage({
-                        id: 'ftxt.doPlaySoundWait',
-                        default: 'Play sound [NUM] and wait',
-                        description: 'Play a sound and wait'
-                    }),
-                    blockType: BlockType.COMMAND,
-                    arguments: {
-                        NUM: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 1,
-                            maxValue: 29
-                        }
-                    }
-                },
 
                 {
                     opcode: 'doSetLamp',
@@ -667,22 +418,6 @@ class Scratch3TxtBlocks {
                 },
                 // ----------------------------
                 {
-                    opcode: 'doResetCounter',
-                    text: formatMessage({
-                        id: 'ftxt.doResetCounter',
-                        default: 'Reset counter [COUNTER_ID]',
-                        description: 'Reset the value of the given counter'
-                    }),
-                    blockType: BlockType.COMMAND,
-                    arguments: {
-                        COUNTER_ID: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'counterID',
-                            defaultValue: CounterID.C1
-                        },
-                    }
-                },
-                {
                     opcode: 'doConfigureInput',
                     text: formatMessage({
                         id: 'ftxt.doConfigureInput',
@@ -715,7 +450,7 @@ class Scratch3TxtBlocks {
                     arguments: {
                         MOTOR_ID: {
                             type: ArgumentType.NUMBER,
-                            menu: 'motorID',
+                            menu: 'outputID',
                             defaultValue: 0
                         },
                         SPEED: {
@@ -737,7 +472,7 @@ class Scratch3TxtBlocks {
                     arguments: {
                         MOTOR_ID: {
                             type: ArgumentType.NUMBER,
-                            menu: 'motorID',
+                            menu: 'outputID',
                             defaultValue: 0
                         },
                         SPEED: {
@@ -764,7 +499,7 @@ class Scratch3TxtBlocks {
                     arguments: {
                         MOTOR_ID: {
                             type: ArgumentType.NUMBER,
-                            menu: 'motorID',
+                            menu: 'outputID',
                             defaultValue: 0
                         },
                         DIRECTION: {
@@ -785,140 +520,13 @@ class Scratch3TxtBlocks {
                     arguments: {
                         MOTOR_ID: {
                             type: ArgumentType.NUMBER,
-                            menu: 'motorID',
+                            menu: 'outputID',
                             defaultValue: 0
                         },
                     }
                 },
-
                 // MOTOR DONE
-                {
-                    opcode: 'doSetMotorSpeedDirDist',
-                    text: formatMessage({
-                        id: 'ftxt.doSetMotorSpeedDirDist',
-                        default: 'Move motor [MOTOR_ID] by [STEPS] steps with [SPEED] [DIRECTION]',
-                        description: 'Move the motor by the given values.'
-                    }),
-                    blockType: BlockType.COMMAND,
-                    arguments: {
-                        MOTOR_ID: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorID',
-                            defaultValue: 0
-                        },
-                        DIRECTION: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorDirection',
-                            defaultValue: MotorDirectionEnum.MOTOR_FORWARD
-                        },
-                        STEPS: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 100,
-                            minValue: 0
-                        },
-                        SPEED: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 8,
-                            minValue: 0,
-                            maxValue: 8
-                        }
-                    }
-                },
-                {
-                    opcode: 'doSetMotorSpeedDirSync',
-                    text: formatMessage({
-                        id: 'ftxt.doSetMotorSpeedDirSync',
-                        default: 'Move motor [MOTOR_ID] [DIRECTION] and [MOTOR_ID2] [DIRECTION2] with [SPEED]',
-                        description: 'Move the motor by the given values.'
-                    }),
-                    blockType: BlockType.COMMAND,
-                    arguments: {
-                        MOTOR_ID: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorID',
-                            defaultValue: 0
-                        },
-                        MOTOR_ID2: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorID',
-                            defaultValue: 1
-                        },
-                        DIRECTION: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorDirection',
-                            defaultValue: MotorDirectionEnum.MOTOR_FORWARD
-                        },
-                        DIRECTION2: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorDirection',
-                            defaultValue: MotorDirectionEnum.MOTOR_FORWARD
-                        },
-                        SPEED: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 8,
-                            minValue: 0,
-                            maxValue: 8
-                        }
-                    }
-                },
-                {
-                    opcode: 'doSetMotorSpeedDirDistSync',
-                    text: formatMessage({
-                        id: 'ftxt.doSetMotorSpeedDirDistSync',
-                        default: 'Move motor [MOTOR_ID] [DIRECTION] and [MOTOR_ID2] [DIRECTION2] by [STEPS] steps with [SPEED]',
-                        description: 'Move the motor by the given values.'
-                    }),
-                    blockType: BlockType.COMMAND,
-                    arguments: {
-                        MOTOR_ID: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorID',
-                            defaultValue: 0
-                        },
-                        MOTOR_ID2: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorID',
-                            defaultValue: 1
-                        },
-                        DIRECTION: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorDirection',
-                            defaultValue: MotorDirectionEnum.MOTOR_FORWARD
-                        },
-                        DIRECTION2: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorDirection',
-                            defaultValue: MotorDirectionEnum.MOTOR_FORWARD
-                        },
-                        STEPS: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 100,
-                            minValue: 0
-                        },
-                        SPEED: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 8,
-                            minValue: 0,
-                            maxValue: 8
-                        }
-                    }
-                },
-                {
-                    opcode: 'doStopMotorAndReset',
-                    text: formatMessage({
-                        id: 'ftxt.doStopMotorAndReset',
-                        default: 'Reset [MOTOR_ID]',
-                        description: 'Stop the motor and reset all synchronizations.'
-                    }),
-                    blockType: BlockType.COMMAND,
-                    arguments: {
-                        MOTOR_ID: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'motorID',
-                            defaultValue: 0
-                        }
-                    }
-                },
+
                 // RESET
                 {
                     opcode: 'reset',
@@ -932,15 +540,13 @@ class Scratch3TxtBlocks {
                 //*/
             ],
             menus: {
-                motorID: Scratch3TxtBlocks._buildIDMenu(4),
-                counterID: Scratch3TxtBlocks._buildIDMenu(4),
-                inputID: Scratch3TxtBlocks._buildIDMenu(8),
-                outputID: Scratch3TxtBlocks._buildIDMenu(8),
-                inputModes: Scratch3TxtBlocks._buildInputModeMenu(),
-                inputAnalogSensorTypes: Scratch3TxtBlocks._buildAnalogSensorTypeMenu(),
-                inputDigitalSensorTypes: Scratch3TxtBlocks._buildDigitalSensorTypeMenu(),
-                inputDigitalSensorChangeTypes: Scratch3TxtBlocks._buildOpenCloseMenu(),
-                motorDirection: Scratch3TxtBlocks._buildDirectionMenu(),
+                inputID: Scratch3BTSmartBlocks._buildIDMenu(4),
+                outputID: Scratch3BTSmartBlocks._buildIDMenu(2),
+                inputModes: Scratch3BTSmartBlocks._buildInputModeMenu(),
+                inputAnalogSensorTypes: Scratch3BTSmartBlocks._buildAnalogSensorTypeMenu(),
+                inputDigitalSensorTypes: Scratch3BTSmartBlocks._buildDigitalSensorTypeMenu(),
+                inputDigitalSensorChangeTypes: Scratch3BTSmartBlocks._buildOpenCloseMenu(),
+                motorDirection: Scratch3BTSmartBlocks._buildDirectionMenu(),
                 compares: ['<', '>']
             }
         };
@@ -981,13 +587,6 @@ class Scratch3TxtBlocks {
                 description: 'Color Sensor'
             }),
             value: String(InputAnalogSensorTypes.sens_color)
-        }, {
-            text: formatMessage({
-                id: 'ftxt.sensor_analog_distance',
-                default: 'Distance Sensor',
-                description: 'Distance Sensor'
-            }),
-            value: String(InputAnalogSensorTypes.sens_distance)
         }, {
             text: formatMessage({
                 id: 'ftxt.sensor_analog_ntc',
@@ -1104,7 +703,7 @@ class Scratch3TxtBlocks {
         }
 
         //TODO: Automatic reconnect
-        this._device = new TxtController(this.runtime, Scratch3TxtBlocks.EXTENSION_ID);
+        this._device = new BTController(this.runtime, Scratch3BTSmartBlocks.EXTENSION_ID);
     }
 
     getPeripheralIsConnected() {
@@ -1162,44 +761,6 @@ class Scratch3TxtBlocks {
         );
     }
 
-    doStopMotorAndReset(args) {
-        return this._device.doStopMotorAndReset(
-            Cast.toNumber(args.MOTOR)
-        );
-    }
-
-
-    doSetMotorSpeedDirDist(args) {
-        return this._device.doSetMotorSpeedDirDist(
-            Cast.toNumber(args.MOTOR_ID),
-            Cast.toNumber(args.STEPS),
-            Cast.toNumber(args.SPEED),
-            Cast.toNumber(args.DIRECTION)
-        )
-    }
-
-    doSetMotorSpeedDirSync(args) {
-        return this._device.doSetMotorSpeedDirSync(
-            Cast.toNumber(args.MOTOR_ID),
-            Cast.toNumber(args.DIRECTION),
-            Cast.toNumber(args.MOTOR_ID2),
-            Cast.toNumber(args.DIRECTION2),
-            Cast.toNumber(args.SPEED)
-        )
-    }
-
-    // FIXME: Removing this block after executing it gives an exception
-    doSetMotorSpeedDirDistSync(args) {
-        return this._device.doSetMotorSpeedDirDistSync(
-            Cast.toNumber(args.MOTOR_ID),
-            Cast.toNumber(args.DIRECTION),
-            Cast.toNumber(args.MOTOR_ID2),
-            Cast.toNumber(args.DIRECTION2),
-            Cast.toNumber(args.STEPS),
-            Cast.toNumber(args.SPEED),
-        )
-    }
-
     isClosed(args) {
         // SENSOR, INPUT
         return this._device.getDigitalSensor(
@@ -1213,18 +774,6 @@ class Scratch3TxtBlocks {
         return this._device.getSensor(
             Cast.toNumber(args.INPUT),
             Cast.toNumber(args.SENSOR)
-        );
-    }
-
-    getCounter(args) {
-        return this._device.getCounterById(
-            Cast.toNumber(args.COUNTER_ID)
-        ).value;
-    }
-
-    doResetCounter(args) {
-        return this._device.doResetCounter(
-            Cast.toNumber(args.COUNTER_ID)
         );
     }
 
@@ -1257,14 +806,6 @@ class Scratch3TxtBlocks {
         );
     }
 
-    onCounter(args) { // COUNTER_ID, OPERATOR, VALUE
-        return this._device.onCounter(
-            Cast.toNumber(args.COUNTER_ID),
-            args.OPERATOR,
-            Cast.toNumber(args.VALUE)
-        );
-    }
-
     onInput(args) { // SENSOR, INPUT, OPERATOR, VALUE
         return this._device.onInput(
             Cast.toNumber(args.INPUT),
@@ -1280,4 +821,4 @@ class Scratch3TxtBlocks {
 
 }
 
-module.exports = Scratch3TxtBlocks;
+module.exports = Scratch3BTSmartBlocks;

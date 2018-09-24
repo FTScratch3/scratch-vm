@@ -1,5 +1,5 @@
-const ScratchLinkWebSocket = 'ws://127.0.0.1:8001/api';
-//const ScratchLinkWebSocket = 'ws://10.230.0.1:8001/api';
+const ScratchLinkWebSocketTXT = 'ws://127.0.0.1:8001/api';
+const ScratchLinkWebSocketBTSmart = 'ws://127.0.0.1:8001/api';
 
 /**
  * Commands supported by this connection
@@ -16,7 +16,7 @@ const MessageType = {
 
 class ftxtSession {
 
-    constructor(runtime, connectCallback, sensCallback, soundDoneCallback) {
+    constructor(runtime, websocketAddress, connectCallback, sensCallback, soundDoneCallback) {
         this._runtime = runtime;
         this._status = 0;
         this._device = null;
@@ -25,7 +25,8 @@ class ftxtSession {
         this._sensCallback = sensCallback;
         this._soundDoneCallback = soundDoneCallback;
 
-        this._ws = new WebSocket(ScratchLinkWebSocket);
+        console.log({websocketAddress})
+        this._ws = new WebSocket(websocketAddress);
 
         this._ws.onopen = () => this.connectToDevice();
         this._ws.onerror = () => this._sendError('ws onerror');
@@ -50,6 +51,7 @@ class ftxtSession {
     }
 
     connectToDevice() {
+        console.log("connectToDevice")
         this.sendPingMessage();
     }
 
@@ -109,6 +111,7 @@ class ftxtSession {
      * @param {number} id - the id of the peripheral to connect to
      */
     connectDevice(id) {
+        console.log("connectDevice", {id})
         // TODO: How??
     }
 
@@ -138,6 +141,7 @@ class ftxtSession {
     }
 
     sendPingMessage() {
+        console.log("Sending Ping")
         this.sendMessage(MessageType.PING);
     }
 
@@ -188,4 +192,4 @@ class FTxtIncomingMessage {
     }
 }
 
-module.exports = {ftxtSession};
+module.exports = {ftxtSession, ScratchLinkWebSocketTXT, ScratchLinkWebSocketBTSmart};
