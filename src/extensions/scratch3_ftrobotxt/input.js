@@ -51,7 +51,8 @@ const InputAnalogSensorTypes = {
 const InputDigitalSensorTypes = {
     sens_button: 0,
     sens_lightBarrier: 1,
-    sens_reed: 2
+    sens_reed: 2,
+    sens_trail: 3,
 };
 
 /**
@@ -108,6 +109,7 @@ class Input extends TxtInput {
             case InputDigitalSensorTypes.sens_button:
             case InputDigitalSensorTypes.sens_lightBarrier:
             case InputDigitalSensorTypes.sens_reed:
+            case InputDigitalSensorTypes.sens_trail:
                 return this.setMode(1);
             default:
                 return this.setMode(-1)

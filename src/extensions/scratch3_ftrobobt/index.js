@@ -576,6 +576,13 @@ class Scratch3BTSmartBlocks {
                 description: 'Reed contact'
             }),
             value: String(InputDigitalSensorTypes.sens_reed)
+        }, {
+            text: formatMessage({
+                id: 'ftxt.sensor_digital_trail',
+                default: 'Trail Sensor',
+                description: 'Trail Sensor'
+            }),
+            value: String(InputDigitalSensorTypes.sens_trail)
         }];
     }
 
