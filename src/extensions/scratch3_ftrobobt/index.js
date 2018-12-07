@@ -357,7 +357,7 @@ class Scratch3BTSmartBlocks {
                         default: 'Is [SENSOR] [INPUT] closed?',
                         description: 'check whether a sensor is closed'
                     }),
-                    blockType: BlockType.REPORTER,
+                    blockType: BlockType.BOOLEAN,
                     arguments: {
                         SENSOR: {
                             type: ArgumentType.NUMBER,
