@@ -98,6 +98,7 @@ class Input extends TxtInput {
                 return this.setMode(2);
             case InputAnalogSensorTypes.sens_ntc:
             case InputAnalogSensorTypes.sens_photo:
+            case InputAnalogSensorTypes.sens_distance:
                 return this.setMode(3);
             default:
                 return this.setMode(-1)
