@@ -206,7 +206,7 @@ class BTController {
 
     onInput(inputId, sensorType, operator, value) {
         let input = this.getInputById(inputId);
-        input.adjustAnalogInputMode(inputId);
+        input.adjustAnalogInputMode(sensorType);
         this.sendUpdateIfNeeded();
 
         if (operator === '>') {

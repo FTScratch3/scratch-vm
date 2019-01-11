@@ -381,7 +381,7 @@ class TxtController {
 
     onInput(inputId, sensorType, operator, value) {
         let input = this.getInputById(inputId);
-        input.adjustAnalogInputMode(inputId);
+        input.adjustAnalogInputMode(sensorType);
         this.sendUpdateIfNeeded();
 
         if (operator === '>') {
@@ -1272,7 +1272,7 @@ class Scratch3TxtBlocks {
         );
     }
 
-    onInput(args) { // SENSOR, INPUT, OPERATOR, VALUE
+    onInput(args) { // If value of [SENSOR] [INPUT] [OPERATOR] [VALUE]
         return this._device.onInput(
             Cast.toNumber(args.INPUT),
             Cast.toNumber(args.SENSOR),
