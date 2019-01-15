@@ -3,7 +3,7 @@ const BlockType = require('../../extension-support/block-type');
 const log = require('../../util/log');
 const cast = require('../../util/cast');
 const formatMessage = require('format-message');
-const BLESession = require('../../io/bleSession');
+const BLE = require('../../io/ble');
 const Base64Util = require('../../util/base64-util');
 
 /**
@@ -25,7 +25,8 @@ const BLECommand = {
     CMD_DISPLAY_LED: 0x82
 };
 
-const BLETimeout = 4500; // TODO: might need tweaking based on how long the device takes to start sending data
+// TODO: Needs comment
+const BLETimeout = 4500; // TODO: might need tweaking based on how long the peripheral takes to start sending data
 
 /**
  * A time interval to wait (in milliseconds) while a block that sends a BLE message is running.
@@ -46,7 +47,7 @@ const BLEUUID = {
 };
 
 /**
- * Manage communication with a MicroBit device over a Scrath Link client socket.
+ * Manage communication with a MicroBit peripheral over a Scrath Link client socket.
  */
 class MicroBit {
 
@@ -65,12 +66,17 @@ class MicroBit {
         this._runtime = runtime;
 
         /**
-         * The BluetoothLowEnergy connection session for reading/writing device data.
-         * @type {BLESession}
+         * The BluetoothLowEnergy connection socket for reading/writing peripheral data.
+         * @type {BLE}
          * @private
          */
         this._ble = null;
-        this._runtime.registerExtensionDevice(extensionId, this);
+        this._runtime.registerPeripheralExtension(extensionId, this);
+
+        /**
+         * The id of the extension this peripheral belongs to.
+         */
+        this._extensionId = extensionId;
 
         /**
          * The most recently received value for each sensor.
@@ -116,7 +122,7 @@ class MicroBit {
         this._timeoutID = null;
 
         /**
-         * A flag that is true while we are busy sending data to the BLE session.
+         * A flag that is true while we are busy sending data to the BLE socket.
          * @type {boolean}
          * @private
          */
@@ -127,60 +133,30 @@ class MicroBit {
          * true for a long time.
          */
         this._busyTimeoutID = null;
-    }
 
-    // TODO: keep here?
-    /**
-     * Called by the runtime when user wants to scan for a device.
-     */
-    startDeviceScan () {
-        this._ble = new BLESession(this._runtime, {
-            filters: [
-                {services: [BLEUUID.service]}
-            ]
-        }, this._onSessionConnect.bind(this));
-    }
-
-    // TODO: keep here?
-    /**
-     * Called by the runtime when user wants to connect to a certain device.
-     * @param {number} id - the id of the device to connect to.
-     */
-    connectDevice (id) {
-        this._ble.connectDevice(id);
-    }
-
-    disconnectSession () {
-        window.clearInterval(this._timeoutID);
-        this._ble.disconnectSession();
-    }
-
-    getPeripheralIsConnected () {
-        let connected = false;
-        if (this._ble) {
-            connected = this._ble.getPeripheralIsConnected();
-        }
-        return connected;
+        this.disconnect = this.disconnect.bind(this);
+        this._onConnect = this._onConnect.bind(this);
+        this._onMessage = this._onMessage.bind(this);
     }
 
     /**
      * @param {string} text - the text to display.
-     * @return {Promise} - a Promise that resolves when writing to device.
+     * @return {Promise} - a Promise that resolves when writing to peripheral.
      */
     displayText (text) {
         const output = new Uint8Array(text.length);
         for (let i = 0; i < text.length; i++) {
             output[i] = text.charCodeAt(i);
         }
-        return this._writeSessionData(BLECommand.CMD_DISPLAY_TEXT, output);
+        return this.send(BLECommand.CMD_DISPLAY_TEXT, output);
     }
 
     /**
      * @param {Uint8Array} matrix - the matrix to display.
-     * @return {Promise} - a Promise that resolves when writing to device.
+     * @return {Promise} - a Promise that resolves when writing to peripheral.
      */
     displayMatrix (matrix) {
-        return this._writeSessionData(BLECommand.CMD_DISPLAY_LED, matrix);
+        return this.send(BLECommand.CMD_DISPLAY_LED, matrix);
     }
 
     /**
@@ -226,58 +202,58 @@ class MicroBit {
     }
 
     /**
-     * @param {number} pin - the pin to check touch state.
-     * @return {number} - the latest value received for the touch pin states.
+     * Called by the runtime when user wants to scan for a peripheral.
      */
-    _checkPinState (pin) {
-        return this._sensors.touchPins[pin];
+    scan () {
+        if (this._ble) {
+            this._ble.disconnect();
+        }
+        this._ble = new BLE(this._runtime, this._extensionId, {
+            filters: [
+                {services: [BLEUUID.service]}
+            ]
+        }, this._onConnect);
     }
 
     /**
-     * Starts reading data from device after BLE has connected to it.
+     * Called by the runtime when user wants to connect to a certain peripheral.
+     * @param {number} id - the id of the peripheral to connect to.
      */
-    _onSessionConnect () {
-        const callback = this._processSessionData.bind(this);
-        this._ble.read(BLEUUID.service, BLEUUID.rxChar, true, callback);
-        this._timeoutID = window.setInterval(this.disconnectSession.bind(this), BLETimeout);
+    connect (id) {
+        if (this._ble) {
+            this._ble.connectPeripheral(id);
+        }
     }
 
     /**
-     * Process the sensor data from the incoming BLE characteristic.
-     * @param {object} base64 - the incoming BLE data.
-     * @private
+     * Disconnect from the micro:bit.
      */
-    _processSessionData (base64) {
-        // parse data
-        const data = Base64Util.base64ToUint8Array(base64);
-
-        this._sensors.tiltX = data[1] | (data[0] << 8);
-        if (this._sensors.tiltX > (1 << 15)) this._sensors.tiltX -= (1 << 16);
-        this._sensors.tiltY = data[3] | (data[2] << 8);
-        if (this._sensors.tiltY > (1 << 15)) this._sensors.tiltY -= (1 << 16);
-
-        this._sensors.buttonA = data[4];
-        this._sensors.buttonB = data[5];
-
-        this._sensors.touchPins[0] = data[6];
-        this._sensors.touchPins[1] = data[7];
-        this._sensors.touchPins[2] = data[8];
-
-        this._sensors.gestureState = data[9];
-
-        // cancel disconnect timeout and start a new one
+    disconnect () {
         window.clearInterval(this._timeoutID);
-        this._timeoutID = window.setInterval(this.disconnectSession.bind(this), BLETimeout);
+        if (this._ble) {
+            this._ble.disconnect();
+        }
     }
 
     /**
-     * Send a message to the device BLE session.
+     * Return true if connected to the micro:bit.
+     * @return {boolean} - whether the micro:bit is connected.
+     */
+    isConnected () {
+        let connected = false;
+        if (this._ble) {
+            connected = this._ble.isConnected();
+        }
+        return connected;
+    }
+
+    /**
+     * Send a message to the peripheral BLE socket.
      * @param {number} command - the BLE command hex.
      * @param {Uint8Array} message - the message to write
-     * @private
      */
-    _writeSessionData (command, message) {
-        if (!this.getPeripheralIsConnected()) return;
+    send (command, message) {
+        if (!this.isConnected()) return;
         if (this._busy) return;
 
         // Set a busy flag so that while we are sending a message and waiting for
@@ -286,7 +262,7 @@ class MicroBit {
 
         // Set a timeout after which to reset the busy flag. This is used in case
         // a BLE message was sent for which we never received a response, because
-        // e.g. the device was turned off after the message was sent. We reset
+        // e.g. the peripheral was turned off after the message was sent. We reset
         // the busy flag after a while so that it is possible to try again later.
         this._busyTimeoutID = window.setTimeout(() => {
             this._busy = false;
@@ -306,6 +282,52 @@ class MicroBit {
             }
         );
     }
+
+    /**
+     * Starts reading data from peripheral after BLE has connected to it.
+     * @private
+     */
+    _onConnect () {
+        this._ble.read(BLEUUID.service, BLEUUID.rxChar, true, this._onMessage);
+        this._timeoutID = window.setInterval(this.disconnect, BLETimeout);
+    }
+
+    /**
+     * Process the sensor data from the incoming BLE characteristic.
+     * @param {object} base64 - the incoming BLE data.
+     * @private
+     */
+    _onMessage (base64) {
+        // parse data
+        const data = Base64Util.base64ToUint8Array(base64);
+
+        this._sensors.tiltX = data[1] | (data[0] << 8);
+        if (this._sensors.tiltX > (1 << 15)) this._sensors.tiltX -= (1 << 16);
+        this._sensors.tiltY = data[3] | (data[2] << 8);
+        if (this._sensors.tiltY > (1 << 15)) this._sensors.tiltY -= (1 << 16);
+
+        this._sensors.buttonA = data[4];
+        this._sensors.buttonB = data[5];
+
+        this._sensors.touchPins[0] = data[6];
+        this._sensors.touchPins[1] = data[7];
+        this._sensors.touchPins[2] = data[8];
+
+        this._sensors.gestureState = data[9];
+
+        // cancel disconnect timeout and start a new one
+        window.clearInterval(this._timeoutID);
+        this._timeoutID = window.setInterval(this.disconnect, BLETimeout);
+    }
+
+    /**
+     * @param {number} pin - the pin to check touch state.
+     * @return {number} - the latest value received for the touch pin states.
+     * @private
+     */
+    _checkPinState (pin) {
+        return this._sensors.touchPins[pin];
+    }
 }
 
 /**
@@ -313,7 +335,7 @@ class MicroBit {
  * @readonly
  * @enum {string}
  */
-const TiltDirection = {
+const MicroBitTiltDirection = {
     FRONT: 'front',
     BACK: 'back',
     LEFT: 'left',
@@ -326,7 +348,7 @@ const TiltDirection = {
  * @readonly
  * @enum {string}
  */
-const Gestures = {
+const MicroBitGestures = {
     MOVED: 'moved',
     SHAKEN: 'shaken',
     JUMPED: 'jumped'
@@ -337,7 +359,7 @@ const Gestures = {
  * @readonly
  * @enum {string}
  */
-const Buttons = {
+const MicroBitButtons = {
     A: 'A',
     B: 'B',
     ANY: 'any'
@@ -348,13 +370,13 @@ const Buttons = {
  * @readonly
  * @enum {string}
  */
-const PinState = {
+const MicroBitPinState = {
     ON: 'on',
     OFF: 'off'
 };
 
 /**
- * Scratch 3.0 blocks to interact with a MicroBit device.
+ * Scratch 3.0 blocks to interact with a MicroBit peripheral.
  */
 class Scratch3MicroBitBlocks {
 
@@ -386,11 +408,11 @@ class Scratch3MicroBitBlocks {
         return [
             {
                 text: 'A',
-                value: Buttons.A
+                value: MicroBitButtons.A
             },
             {
                 text: 'B',
-                value: Buttons.B
+                value: MicroBitButtons.B
             },
             {
                 text: formatMessage({
@@ -398,7 +420,7 @@ class Scratch3MicroBitBlocks {
                     default: 'any',
                     description: 'label for "any" element in button picker for micro:bit extension'
                 }),
-                value: Buttons.ANY
+                value: MicroBitButtons.ANY
             }
         ];
     }
@@ -414,7 +436,7 @@ class Scratch3MicroBitBlocks {
                     default: 'moved',
                     description: 'label for moved gesture in gesture picker for micro:bit extension'
                 }),
-                value: Gestures.MOVED
+                value: MicroBitGestures.MOVED
             },
             {
                 text: formatMessage({
@@ -422,7 +444,7 @@ class Scratch3MicroBitBlocks {
                     default: 'shaken',
                     description: 'label for shaken gesture in gesture picker for micro:bit extension'
                 }),
-                value: Gestures.SHAKEN
+                value: MicroBitGestures.SHAKEN
             },
             {
                 text: formatMessage({
@@ -430,7 +452,7 @@ class Scratch3MicroBitBlocks {
                     default: 'jumped',
                     description: 'label for jumped gesture in gesture picker for micro:bit extension'
                 }),
-                value: Gestures.JUMPED
+                value: MicroBitGestures.JUMPED
             }
         ];
     }
@@ -446,7 +468,7 @@ class Scratch3MicroBitBlocks {
                     default: 'on',
                     description: 'label for on element in pin state picker for micro:bit extension'
                 }),
-                value: PinState.ON
+                value: MicroBitPinState.ON
             },
             {
                 text: formatMessage({
@@ -454,7 +476,7 @@ class Scratch3MicroBitBlocks {
                     default: 'off',
                     description: 'label for off element in pin state picker for micro:bit extension'
                 }),
-                value: PinState.OFF
+                value: MicroBitPinState.OFF
             }
         ];
     }
@@ -470,7 +492,7 @@ class Scratch3MicroBitBlocks {
                     default: 'front',
                     description: 'label for front element in tilt direction picker for micro:bit extension'
                 }),
-                value: TiltDirection.FRONT
+                value: MicroBitTiltDirection.FRONT
             },
             {
                 text: formatMessage({
@@ -478,7 +500,7 @@ class Scratch3MicroBitBlocks {
                     default: 'back',
                     description: 'label for back element in tilt direction picker for micro:bit extension'
                 }),
-                value: TiltDirection.BACK
+                value: MicroBitTiltDirection.BACK
             },
             {
                 text: formatMessage({
@@ -486,7 +508,7 @@ class Scratch3MicroBitBlocks {
                     default: 'left',
                     description: 'label for left element in tilt direction picker for micro:bit extension'
                 }),
-                value: TiltDirection.LEFT
+                value: MicroBitTiltDirection.LEFT
             },
             {
                 text: formatMessage({
@@ -494,7 +516,7 @@ class Scratch3MicroBitBlocks {
                     default: 'right',
                     description: 'label for right element in tilt direction picker for micro:bit extension'
                 }),
-                value: TiltDirection.RIGHT
+                value: MicroBitTiltDirection.RIGHT
             }
         ];
     }
@@ -511,7 +533,7 @@ class Scratch3MicroBitBlocks {
                     default: 'any',
                     description: 'label for any direction element in tilt direction picker for micro:bit extension'
                 }),
-                value: TiltDirection.ANY
+                value: MicroBitTiltDirection.ANY
             }
         ];
     }
@@ -527,8 +549,8 @@ class Scratch3MicroBitBlocks {
          */
         this.runtime = runtime;
 
-        // Create a new MicroBit device instance
-        this._device = new MicroBit(this.runtime, Scratch3MicroBitBlocks.EXTENSION_ID);
+        // Create a new MicroBit peripheral instance
+        this._peripheral = new MicroBit(this.runtime, Scratch3MicroBitBlocks.EXTENSION_ID);
     }
 
     /**
@@ -553,7 +575,7 @@ class Scratch3MicroBitBlocks {
                         BTN: {
                             type: ArgumentType.STRING,
                             menu: 'buttons',
-                            defaultValue: Buttons.A
+                            defaultValue: MicroBitButtons.A
                         }
                     }
                 },
@@ -569,7 +591,7 @@ class Scratch3MicroBitBlocks {
                         BTN: {
                             type: ArgumentType.STRING,
                             menu: 'buttons',
-                            defaultValue: Buttons.A
+                            defaultValue: MicroBitButtons.A
                         }
                     }
                 },
@@ -586,7 +608,7 @@ class Scratch3MicroBitBlocks {
                         GESTURE: {
                             type: ArgumentType.STRING,
                             menu: 'gestures',
-                            defaultValue: Gestures.MOVED
+                            defaultValue: MicroBitGestures.MOVED
                         }
                     }
                 },
@@ -610,7 +632,7 @@ class Scratch3MicroBitBlocks {
                     opcode: 'displayText',
                     text: formatMessage({
                         id: 'microbit.displayText',
-                        default: 'display [TEXT]',
+                        default: 'display text [TEXT]',
                         description: 'display text on the micro:bit display'
                     }),
                     blockType: BlockType.COMMAND,
@@ -652,7 +674,7 @@ class Scratch3MicroBitBlocks {
                         DIRECTION: {
                             type: ArgumentType.STRING,
                             menu: 'tiltDirectionAny',
-                            defaultValue: TiltDirection.ANY
+                            defaultValue: MicroBitTiltDirection.ANY
                         }
                     }
                 },
@@ -668,7 +690,7 @@ class Scratch3MicroBitBlocks {
                         DIRECTION: {
                             type: ArgumentType.STRING,
                             menu: 'tiltDirectionAny',
-                            defaultValue: TiltDirection.ANY
+                            defaultValue: MicroBitTiltDirection.ANY
                         }
                     }
                 },
@@ -684,7 +706,7 @@ class Scratch3MicroBitBlocks {
                         DIRECTION: {
                             type: ArgumentType.STRING,
                             menu: 'tiltDirection',
-                            defaultValue: TiltDirection.FRONT
+                            defaultValue: MicroBitTiltDirection.FRONT
                         }
                     }
                 },
@@ -693,7 +715,7 @@ class Scratch3MicroBitBlocks {
                     opcode: 'whenPinConnected',
                     text: formatMessage({
                         id: 'microbit.whenPinConnected',
-                        default: 'when pin [PIN] connected test',
+                        default: 'when pin [PIN] connected',
                         description: 'when the pin detects a connection to Earth/Ground'
 
                     }),
@@ -725,11 +747,11 @@ class Scratch3MicroBitBlocks {
      */
     whenButtonPressed (args) {
         if (args.BTN === 'any') {
-            return this._device.buttonA | this._device.buttonB;
+            return this._peripheral.buttonA | this._peripheral.buttonB;
         } else if (args.BTN === 'A') {
-            return this._device.buttonA;
+            return this._peripheral.buttonA;
         } else if (args.BTN === 'B') {
-            return this._device.buttonB;
+            return this._peripheral.buttonB;
         }
         return false;
     }
@@ -741,11 +763,11 @@ class Scratch3MicroBitBlocks {
      */
     isButtonPressed (args) {
         if (args.BTN === 'any') {
-            return this._device.buttonA | this._device.buttonB;
+            return (this._peripheral.buttonA | this._peripheral.buttonB) !== 0;
         } else if (args.BTN === 'A') {
-            return this._device.buttonA;
+            return this._peripheral.buttonA !== 0;
         } else if (args.BTN === 'B') {
-            return this._device.buttonB;
+            return this._peripheral.buttonB !== 0;
         }
         return false;
     }
@@ -758,11 +780,11 @@ class Scratch3MicroBitBlocks {
     whenGesture (args) {
         const gesture = cast.toString(args.GESTURE);
         if (gesture === 'moved') {
-            return (this._device.gestureState >> 2) & 1;
+            return (this._peripheral.gestureState >> 2) & 1;
         } else if (gesture === 'shaken') {
-            return this._device.gestureState & 1;
+            return this._peripheral.gestureState & 1;
         } else if (gesture === 'jumped') {
-            return (this._device.gestureState >> 1) & 1;
+            return (this._peripheral.gestureState >> 1) & 1;
         }
         return false;
     }
@@ -773,19 +795,19 @@ class Scratch3MicroBitBlocks {
      * @return {Promise} - a Promise that resolves after a tick.
      */
     displaySymbol (args) {
-        const symbol = cast.toString(args.MATRIX);
+        const symbol = cast.toString(args.MATRIX).replace(/\s/g, '');
         const reducer = (accumulator, c, index) => {
             const value = (c === '0') ? accumulator : accumulator + Math.pow(2, index);
             return value;
         };
         const hex = symbol.split('').reduce(reducer, 0);
         if (hex !== null) {
-            this._device.ledMatrixState[0] = hex & 0x1F;
-            this._device.ledMatrixState[1] = (hex >> 5) & 0x1F;
-            this._device.ledMatrixState[2] = (hex >> 10) & 0x1F;
-            this._device.ledMatrixState[3] = (hex >> 15) & 0x1F;
-            this._device.ledMatrixState[4] = (hex >> 20) & 0x1F;
-            this._device.displayMatrix(this._device.ledMatrixState);
+            this._peripheral.ledMatrixState[0] = hex & 0x1F;
+            this._peripheral.ledMatrixState[1] = (hex >> 5) & 0x1F;
+            this._peripheral.ledMatrixState[2] = (hex >> 10) & 0x1F;
+            this._peripheral.ledMatrixState[3] = (hex >> 15) & 0x1F;
+            this._peripheral.ledMatrixState[4] = (hex >> 20) & 0x1F;
+            this._peripheral.displayMatrix(this._peripheral.ledMatrixState);
         }
 
         return new Promise(resolve => {
@@ -798,17 +820,22 @@ class Scratch3MicroBitBlocks {
     /**
      * Display text on the 5x5 LED matrix.
      * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves after a tick.
+     * @return {Promise} - a Promise that resolves after the text is done printing.
      * Note the limit is 19 characters
+     * The print time is calculated by multiplying the number of horizontal pixels
+     * by the default scroll delay of 120ms.
+     * The number of horizontal pixels = 6px for each character in the string,
+     * 1px before the string, and 5px after the string.
      */
     displayText (args) {
         const text = String(args.TEXT).substring(0, 19);
-        if (text.length > 0) this._device.displayText(text);
+        if (text.length > 0) this._peripheral.displayText(text);
+        const yieldDelay = 120 * ((6 * text.length) + 6);
 
         return new Promise(resolve => {
             setTimeout(() => {
                 resolve();
-            }, BLESendInterval);
+            }, yieldDelay);
         });
     }
 
@@ -818,9 +845,9 @@ class Scratch3MicroBitBlocks {
      */
     displayClear () {
         for (let i = 0; i < 5; i++) {
-            this._device.ledMatrixState[i] = 0;
+            this._peripheral.ledMatrixState[i] = 0;
         }
-        this._device.displayMatrix(this._device.ledMatrixState);
+        this._peripheral.displayMatrix(this._peripheral.ledMatrixState);
 
         return new Promise(resolve => {
             setTimeout(() => {
@@ -867,9 +894,9 @@ class Scratch3MicroBitBlocks {
      */
     _isTilted (direction) {
         switch (direction) {
-        case TiltDirection.ANY:
-            return (Math.abs(this._device.tiltX / 10) >= Scratch3MicroBitBlocks.TILT_THRESHOLD) ||
-                (Math.abs(this._device.tiltY / 10) >= Scratch3MicroBitBlocks.TILT_THRESHOLD);
+        case MicroBitTiltDirection.ANY:
+            return (Math.abs(this._peripheral.tiltX / 10) >= Scratch3MicroBitBlocks.TILT_THRESHOLD) ||
+                (Math.abs(this._peripheral.tiltY / 10) >= Scratch3MicroBitBlocks.TILT_THRESHOLD);
         default:
             return this._getTiltAngle(direction) >= Scratch3MicroBitBlocks.TILT_THRESHOLD;
         }
@@ -883,14 +910,14 @@ class Scratch3MicroBitBlocks {
      */
     _getTiltAngle (direction) {
         switch (direction) {
-        case TiltDirection.FRONT:
-            return Math.round(this._device.tiltY / -10);
-        case TiltDirection.BACK:
-            return Math.round(this._device.tiltY / 10);
-        case TiltDirection.LEFT:
-            return Math.round(this._device.tiltX / -10);
-        case TiltDirection.RIGHT:
-            return Math.round(this._device.tiltX / 10);
+        case MicroBitTiltDirection.FRONT:
+            return Math.round(this._peripheral.tiltY / -10);
+        case MicroBitTiltDirection.BACK:
+            return Math.round(this._peripheral.tiltY / 10);
+        case MicroBitTiltDirection.LEFT:
+            return Math.round(this._peripheral.tiltX / -10);
+        case MicroBitTiltDirection.RIGHT:
+            return Math.round(this._peripheral.tiltX / 10);
         default:
             log.warn(`Unknown tilt direction in _getTiltAngle: ${direction}`);
         }
@@ -905,7 +932,7 @@ class Scratch3MicroBitBlocks {
         const pin = parseInt(args.PIN, 10);
         if (isNaN(pin)) return;
         if (pin < 0 || pin > 2) return false;
-        return this._device._checkPinState(pin);
+        return this._peripheral._checkPinState(pin);
     }
 }
 

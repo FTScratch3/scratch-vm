@@ -123,6 +123,9 @@ class Scratch3MotionBlocks {
         if (args.TOWARDS === '_mouse_') {
             targetX = util.ioQuery('mouse', 'getScratchX');
             targetY = util.ioQuery('mouse', 'getScratchY');
+        } else if (args.TOWARDS === '_random_') {
+            util.target.setDirection(Math.round(Math.random() * 360) - 180);
+            return;
         } else {
             const pointTarget = this.runtime.getSpriteTargetByName(args.TOWARDS);
             if (!pointTarget) return;
@@ -259,15 +262,24 @@ class Scratch3MotionBlocks {
     }
 
     getX (args, util) {
-        return util.target.x;
+        return this.limitPrecision(util.target.x);
     }
 
     getY (args, util) {
-        return util.target.y;
+        return this.limitPrecision(util.target.y);
     }
 
     getDirection (args, util) {
         return util.target.direction;
+    }
+
+    // This corresponds to snapToInteger in Scratch 2
+    limitPrecision (coordinate) {
+        const rounded = Math.round(coordinate);
+        const delta = coordinate - rounded;
+        const limitedCoord = (Math.abs(delta) < 1e-9) ? rounded : coordinate;
+
+        return limitedCoord;
     }
 }
 
