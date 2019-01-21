@@ -4,7 +4,7 @@
  * @readonly
  * @enum {string}
  */
-const MotorID = {
+export const MotorID = {
     M1: 1,
     M2: 2,
     M3: 3,
@@ -15,7 +15,7 @@ const MotorID = {
 /**
  * @enum
  */
-const MotorDirectionEnum = {
+export const MotorDirectionEnum = {
     MOTOR_FORWARD: 1,
     MOTOR_BACKWARDS: -1,
     MOTOR_STOP: 0
@@ -24,7 +24,7 @@ const MotorDirectionEnum = {
 /**
  * @enum
  */
-const MotorSyncEnum = {
+export const MotorSyncEnum = {
     SYNC_NO_CHANGE: -1,
     SYNC_NONE: -1,
     SYNC_MOTOR1: 1,
@@ -33,7 +33,7 @@ const MotorSyncEnum = {
     SYNC_MOTOR4: 4,
 };
 
-class Motor {
+export class Motor {
     constructor(id) {
         this.id = id;
 
@@ -124,10 +124,3 @@ class Motor {
         return this.setSpeed(newSpeed);
     }
 }
-
-module.exports = {
-    MotorDirectionEnum,
-    MotorSyncEnum,
-    MotorID,
-    Motor
-};

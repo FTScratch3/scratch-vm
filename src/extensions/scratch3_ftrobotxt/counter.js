@@ -7,7 +7,7 @@ import {TxtInput} from "./txtInput";
  * @readonly
  * @enum {string}
  */
-const CounterID = {
+export const CounterID = {
     C1: 0,
     C2: 1,
     C3: 2,
@@ -15,7 +15,7 @@ const CounterID = {
 };
 
 
-class Counter extends TxtInput {
+export class Counter extends TxtInput {
     constructor() {
         super();
 
@@ -37,4 +37,3 @@ class Counter extends TxtInput {
     }
 }
 
-module.exports = {Counter, CounterID};

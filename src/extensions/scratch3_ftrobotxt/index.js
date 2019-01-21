@@ -2,15 +2,15 @@ const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const formatMessage = require('format-message');
-import {ftxtSession, ScratchLinkWebSocketTXT} from "../../io/ftxtSession";
-import {Motor, MotorDirectionEnum, MotorSyncEnum} from "./motor";
-import {Output, OutputID} from "./output";
-import {Counter, CounterID} from "./counter";
-import {
+const {ftxtSession, ScratchLinkWebSocketTXT} = require("../../io/ftxtSession");
+const {Motor, MotorDirectionEnum, MotorSyncEnum} = require("./motor");
+const {Output, OutputID} = require("./output");
+const {Counter, CounterID} = require("./counter");
+const {
     Input, InputID, InputModes, InputAnalogSensorTypes,
     InputDigitalSensorTypes, InputDigitalSensorChangeTypes,
-} from "./input";
-import txtImageSmall from './txt_controller_small.png';
+} = require("./input");
+const txtImageSmall = require('./txt_controller_small.png');
 // TODO: Grafiken
 
 /**
@@ -64,16 +64,20 @@ class TxtController {
         ];
 
 
-        this._runtime.registerExtensionDevice(extensionId, this);
+        this._runtime.registerPeripheralExtension(extensionId, this);
     }
 
     // CONNECTION METHODS
+
+    isConnected() {
+        return this.getPeripheralIsConnected();
+    }
 
     getPeripheralIsConnected() {
         return this._socket ? this._socket.getPeripheralIsConnected() : false;
     }
 
-    startDeviceScan() {
+    scan() {
         this._socket = new ftxtSession(this._runtime,
             ScratchLinkWebSocketTXT,
             () => this._onSessionConnect(),
@@ -82,9 +86,11 @@ class TxtController {
         );
     }
 
-    disconnectSession() {
-        this.reset();
-        this._socket.disconnectSession();
+    disconnect() {
+        if (this._socket) {
+            this.reset();
+            this._socket.disconnectSession();
+        }
     }
 
 
@@ -396,7 +402,8 @@ class TxtController {
     }
 
     reset() {
-        this._socket.sendResetMessage();
+        if (this._socket)
+            this._socket.sendResetMessage();
         // TODO: Delete motor callbacks
     }
 
@@ -1019,35 +1026,35 @@ class Scratch3TxtBlocks {
                 default: 'Digital voltage',
                 description: 'Digital voltage'
             }),
-            value: String(InputModes.mode_d10v)
+            value: InputModes.mode_d10v.toString()
         }, {
             text: formatMessage({
                 id: 'ftxt.input_mode_d5k',
                 default: 'Digital resistance',
                 description: 'Digital resistance'
             }),
-            value: String(InputModes.mode_d5k)
+            value: InputModes.mode_d5k.toString()
         }, {
             text: formatMessage({
                 id: 'ftxt.input_mode_a10v',
                 default: 'Analogue voltage',
                 description: 'Analogue voltage'
             }),
-            value: String(InputModes.mode_a10v)
+            value: InputModes.mode_a10v.toString()
         }, {
             text: formatMessage({
                 id: 'ftxt.input_mode_a5k',
                 default: 'Analogue resistance',
                 description: 'Analogue resistance'
             }),
-            value: String(InputModes.mode_a5k)
+            value: InputModes.mode_a5k.toString()
         }, {
             text: formatMessage({
                 id: 'ftxt.input_mode_ultrasonic',
                 default: 'Ultrasonic',
                 description: 'Ultrasonic'
             }),
-            value: String(InputModes.mode_ultrasonic)
+            value: InputModes.mode_ultrasonic.toString()
         }];
     }
 
@@ -1058,14 +1065,14 @@ class Scratch3TxtBlocks {
                 default: "opens",
                 description: "opens"
             }),
-            value: String(InputDigitalSensorChangeTypes.button_opens)
+            value: InputDigitalSensorChangeTypes.button_opens.toString()
         }, {
             text: formatMessage({
                 id: 'ftxt.input_digital_closes',
                 default: "closes",
                 description: "closes"
             }),
-            value: String(InputDigitalSensorChangeTypes.button_closes)
+            value: InputDigitalSensorChangeTypes.button_closes.toString()
         }];
     }
 
@@ -1076,14 +1083,14 @@ class Scratch3TxtBlocks {
                 default: "forward",
                 description: "forward"
             }),
-            value: String(MotorDirectionEnum.MOTOR_FORWARD)
+            value: MotorDirectionEnum.MOTOR_FORWARD.toString()
         }, {
             text: formatMessage({
                 id: 'ftxt.motor_backwards',
                 default: "backwards",
                 description: "backwards"
             }),
-            value: String(MotorDirectionEnum.MOTOR_BACKWARDS)
+            value: MotorDirectionEnum.MOTOR_BACKWARDS.toString()
         }];
     }
 
@@ -1092,7 +1099,7 @@ class Scratch3TxtBlocks {
         for (let n = 0; n < count; n++) {
             result.push({
                 text: String(n + 1),
-                value: String(n)
+                value: n.toString()
             })
         }
         return result;

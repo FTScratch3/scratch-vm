@@ -5,7 +5,7 @@ import {MotorDirectionEnum} from "../scratch3_ftrobotxt/motor"
  * @readonly
  * @enum {string}
  */
-const OutputID = {
+export const OutputID = {
     O1: 0,
     O2: 1,
     O3: 2,
@@ -18,7 +18,7 @@ const OutputID = {
 
 
 // describes one output (value)
-class Output {
+export class Output {
     constructor(id) {
         this.idx = id;
         this.mod = false;		// output was changed?
@@ -80,8 +80,3 @@ class Output {
         this.dir = MotorDirectionEnum.MOTOR_FORWARD
     }
 }
-
-module.exports = {
-    Output,
-    OutputID
-};

@@ -2,16 +2,16 @@ const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const formatMessage = require('format-message');
-import {ftxtSession, ScratchLinkWebSocketBTSmart} from "../../io/ftxtSession";
-import {Motor, MotorDirectionEnum, MotorSyncEnum} from "../scratch3_ftrobotxt/motor";
-import {Output, OutputID} from "./output";
-import {
+const {ftxtSession, ScratchLinkWebSocketBTSmart} = require("../../io/ftxtSession");
+const {Motor, MotorDirectionEnum, MotorSyncEnum} = require("../scratch3_ftrobotxt/motor");
+const {Output, OutputID} = require("./output");
+const {
     Input, InputID, InputModes, InputAnalogSensorTypes,
     InputDigitalSensorTypes, InputDigitalSensorChangeTypes,
-} from "../scratch3_ftrobotxt/input";
+} = require("../scratch3_ftrobotxt/input");
 
-import btsmartImageSmall from './btsmart_small.png';
-// TODO: Grafiken
+const btsmartImageSmall = require('./btsmart_small.png');
+
 
 /**
  * Manage communication with a WeDo 2.0 device over a Device Manager client socket.
@@ -47,16 +47,19 @@ class BTController {
         ];
 
 
-        this._runtime.registerExtensionDevice(extensionId, this);
+        this._runtime.registerPeripheralExtension(extensionId, this);
     }
 
     // CONNECTION METHODS
+    isConnected() {
+        return this.getPeripheralIsConnected();
+    }
 
     getPeripheralIsConnected() {
         return this._socket ? this._socket.getPeripheralIsConnected() : false;
     }
 
-    startDeviceScan() {
+    scan() {
         this._socket = new ftxtSession(this._runtime,
             ScratchLinkWebSocketBTSmart,
             () => this._onSessionConnect(),
@@ -65,9 +68,11 @@ class BTController {
         );
     }
 
-    disconnectSession() {
-        this.reset();
-        this._socket.disconnectSession();
+    disconnect() {
+        if (this._socket) {
+            this.reset();
+            this._socket.disconnectSession();
+        }
     }
 
 
@@ -221,7 +226,8 @@ class BTController {
     }
 
     reset() {
-        this._socket.sendResetMessage();
+        if (this._socket)
+            this._socket.sendResetMessage();
         // TODO: Delete motor callbacks
     }
 
@@ -829,3 +835,4 @@ class Scratch3BTSmartBlocks {
 }
 
 module.exports = Scratch3BTSmartBlocks;
+

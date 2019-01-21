@@ -7,7 +7,7 @@ import {TxtInput} from "./txtInput";
  * @readonly
  * @enum {string}
  */
-const InputID = {
+export const InputID = {
     I1: 0,
     I2: 1,
     I3: 2,
@@ -23,7 +23,7 @@ const InputID = {
  * @readonly
  * @enum {string}
  */
-const InputModes = {
+export const InputModes = {
     mode_d10v: 0,
     mode_d5k: 1,
     mode_a10v: 2,
@@ -36,7 +36,7 @@ const InputModes = {
  * @readonly
  * @enum {string}
  */
-const InputAnalogSensorTypes = {
+export const InputAnalogSensorTypes = {
     sens_color: 0,
     sens_distance: 1,
     sens_ntc: 2,
@@ -48,7 +48,7 @@ const InputAnalogSensorTypes = {
  * @readonly
  * @enum {string}
  */
-const InputDigitalSensorTypes = {
+export const InputDigitalSensorTypes = {
     sens_button: 0,
     sens_lightBarrier: 1,
     sens_reed: 2,
@@ -60,12 +60,12 @@ const InputDigitalSensorTypes = {
  * @readonly
  * @enum {string}
  */
-const InputDigitalSensorChangeTypes = {
+export const InputDigitalSensorChangeTypes = {
     button_opens: 0,
     button_closes: 1
 };
 
-class Input extends TxtInput {
+export class Input extends TxtInput {
     constructor(id) {
         super();
         this.idx = id;
@@ -120,11 +120,3 @@ class Input extends TxtInput {
     }
 }
 
-module.exports = {
-    Input,
-    InputID,
-    InputModes,
-    InputAnalogSensorTypes,
-    InputDigitalSensorTypes,
-    InputDigitalSensorChangeTypes,
-};

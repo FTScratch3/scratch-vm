@@ -1,4 +1,4 @@
-class TxtInput {
+export class TxtInput {
     constructor() {
         this._value = 0;
         this._oldValue = 0;
@@ -18,4 +18,3 @@ class TxtInput {
     }
 }
 
-module.exports = {TxtInput};

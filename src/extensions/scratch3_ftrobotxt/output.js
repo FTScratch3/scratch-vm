@@ -3,7 +3,7 @@
  * @readonly
  * @enum {string}
  */
-const OutputID = {
+export const OutputID = {
     O1: 0,
     O2: 1,
     O3: 2,
@@ -16,7 +16,7 @@ const OutputID = {
 
 
 // describes one output (value)
-class Output {
+export class Output {
     constructor() {
         this.mod = false;		// output was changed?
         this.val = 0;
@@ -53,7 +53,3 @@ class Output {
     }
 }
 
-module.exports = {
-    Output,
-    OutputID
-};
