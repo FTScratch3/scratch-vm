@@ -659,13 +659,6 @@ class Scratch3BTSmartBlocks {
                 description: 'Analogue resistance'
             }),
             value: String(InputModes.mode_a5k)
-        }, {
-            text: formatMessage({
-                id: 'ftxt.input_mode_ultrasonic',
-                default: 'Ultrasonic',
-                description: 'Ultrasonic'
-            }),
-            value: String(InputModes.mode_ultrasonic)
         }];
     }
 
