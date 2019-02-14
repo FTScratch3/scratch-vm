@@ -11,6 +11,7 @@ const {
     InputDigitalSensorTypes, InputDigitalSensorChangeTypes,
 } = require("./input");
 const txtImageSmall = require('./txt_controller_small.png');
+
 // TODO: Grafiken
 
 /**
@@ -281,7 +282,10 @@ class TxtController {
             .setSpeed08(speed)
             .setDistanceLimit(steps);
 
-        return this.waitForMotorCallback(motorId, steps);
+        return this.waitForMotorCallback(motorId, steps)
+            .then(() => {
+                this.doStopMotorAndReset(motorId);
+            });
     }
 
     doSetMotorSpeedDirSync(motor1Id, directionID1, motor2Id, directionID2, speed) {
@@ -321,7 +325,11 @@ class TxtController {
             .setSpeed08(speed)
             .setDistanceLimit(steps);
 
-        return this.waitForMotorCallback(motor1.id, steps);
+        return this.waitForMotorCallback(motor1.id, steps)
+            .then(() => {
+                this.doStopMotorAndReset(motor1Id);
+                this.doStopMotorAndReset(motor2Id);
+            });
     }
 
     doStopMotorAndReset(motorId) {
