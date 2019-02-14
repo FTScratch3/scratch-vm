@@ -199,7 +199,7 @@ const parseScripts = function (scripts, blocks, addBroadcastMsg, getVariableId, 
  */
 const generateVariableIdGetter = (function () {
     let globalVariableNameMap = {};
-    const namer = (targetId, name, type) => `${targetId}-${name}-${type}`;
+    const namer = (targetId, name, type) => `${targetId}-${StringUtil.replaceUnsafeChars(name)}-${type}`;
     return function (targetId, topLevel) {
         // Reset the global variable map if topLevel
         if (topLevel) globalVariableNameMap = {};
@@ -227,7 +227,7 @@ const globalBroadcastMsgStateGenerator = (function () {
                 if (name === '') {
                     name = emptyStringName;
                 }
-                broadcastMsgNameMap[name] = `broadcastMsgId-${name}`;
+                broadcastMsgNameMap[name] = `broadcastMsgId-${StringUtil.replaceUnsafeChars(name)}`;
                 allBroadcastFields.push(field);
                 return broadcastMsgNameMap[name];
             },
@@ -381,6 +381,7 @@ const parseMonitorObject = (object, runtime, targets, extensions) => {
         mode: object.mode,
         sliderMin: object.sliderMin,
         sliderMax: object.sliderMax,
+        isDiscrete: object.isDiscrete,
         x: object.x,
         y: object.y,
         width: object.width,
@@ -413,7 +414,7 @@ const parseScratchObject = function (object, runtime, extensions, topLevel, zip)
     }
 
     // Blocks container for this object.
-    const blocks = new Blocks();
+    const blocks = new Blocks(runtime);
     // @todo: For now, load all Scratch objects (stage/sprites) as a Sprite.
     const sprite = new Sprite(blocks, runtime);
     // Sprite/stage name from JSON.
