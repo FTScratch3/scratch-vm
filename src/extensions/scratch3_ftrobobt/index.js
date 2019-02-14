@@ -14,7 +14,7 @@ const btsmartImageSmall = require('./btsmart_small.png');
 
 
 /**
- * Manage communication with a WeDo 2.0 device over a Device Manager client socket.
+ * Manage communication with a BTSmart  device over a Device Manager client socket.
  */
 class BTController {
 
@@ -26,7 +26,7 @@ class BTController {
     }
 
     /**
-     * Construct a WeDo2 communication object.
+     * Construct a BTSmart communication object.
      * @param runtime
      * @param extensionId
      */
@@ -48,6 +48,23 @@ class BTController {
 
 
         this._runtime.registerPeripheralExtension(extensionId, this);
+        this.startUpdateCheck();
+    }
+
+    startUpdateCheck() {
+        // Every N ms check for updates
+        if (this._updateInterval === 0) {
+            this._updateInterval = setInterval(() => {
+                this.sendUpdateIfNeeded();
+            }, 5);
+        }
+    }
+
+    stopUpdateCheck() {
+        if (this._updateInterval !== 0) {
+            clearInterval(this._updateInterval);
+            this._updateInterval = 0;
+        }
     }
 
     // CONNECTION METHODS
@@ -88,16 +105,18 @@ class BTController {
     }
 
     sendUpdateIfNeeded() {
-        for (let output of this.outputs) {
-            if (output.mod) {
-                this._socket.sendJsonMessage("SETO", output);
-                output.transmitted();
+        if (this._socket && this.checkIfUpdateIsNeeded()) {
+            for (let output of this.outputs) {
+                if (output.mod) {
+                    this._socket.sendJsonMessage("SETO", output);
+                    output.transmitted();
+                }
             }
-        }
-        for (let input of this.inputs) {
-            if (input.mod) {
-                this._socket.sendJsonMessage("CFGI", input);
-                input.transmitted();
+            for (let input of this.inputs) {
+                if (input.mod) {
+                    this._socket.sendJsonMessage("CFGI", input);
+                    input.transmitted();
+                }
             }
         }
     }
@@ -105,7 +124,7 @@ class BTController {
     // events
 
     onSensData(message) {
-        console.log("onSensData", {message});
+        // console.log("onSensData", {message});
         for (let n = 0; n < 5; n++) {
             this.inputs[n].setNewValue(message.inputs[n]);
         }
@@ -153,31 +172,26 @@ class BTController {
     doSetMotorSpeed(motorId, speed) {
         this.getMotorById(motorId)
             .setSpeed08(speed);
-        this.sendUpdateIfNeeded();
     }
 
     doSetMotorSpeedDir(motorId, speed, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID)
             .setSpeed08(speed);
-        this.sendUpdateIfNeeded();
     }
 
     doSetMotorDir(motorId, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID);
-        this.sendUpdateIfNeeded();
     }
 
     // Methods for blocks
     doSetOutputValue(outputID, value) {
         this.outputs[outputID].setValue08(value);
-        this.sendUpdateIfNeeded();
     }
 
     doConfigureInput(inputId, modeId) {
         this.getInputById(inputId).setMode(modeId);
-        this.sendUpdateIfNeeded();
     }
 
     getSensor(inputId, sensorID) {
@@ -228,14 +242,13 @@ class BTController {
     reset() {
         if (this._socket)
             this._socket.sendResetMessage();
-        // TODO: Delete motor callbacks
     }
 
 }
 
 
 /**
- * Scratch 3.0 blocks to interact with a LEGO WeDo 2.0 device.
+ * Scratch 3.0 blocks to interact with a BTSmart device.
  */
 class Scratch3BTSmartBlocks {
 
@@ -247,7 +260,7 @@ class Scratch3BTSmartBlocks {
     }
 
     /**
-     * Construct a set of WeDo 2.0 blocks.
+     * Construct a set of BTSmart blocks.
      * @param {Runtime} runtime - the Scratch 3.0 runtime.
      */
     constructor(runtime) {
@@ -706,7 +719,7 @@ class Scratch3BTSmartBlocks {
     // ---- MENU DONE
 
     /**
-     * Use the Device Manager client to attempt to connect to a WeDo 2.0 device.
+     * Use the Device Manager client to attempt to connect to a BTSmart device.
      * TODO!
      */
     connect() {

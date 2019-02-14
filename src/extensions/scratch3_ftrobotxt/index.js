@@ -14,7 +14,7 @@ const txtImageSmall = require('./txt_controller_small.png');
 // TODO: Grafiken
 
 /**
- * Manage communication with a WeDo 2.0 device over a Device Manager client socket.
+ * Manage communication with a TXT device over a Device Manager client socket.
  */
 class TxtController {
 
@@ -26,7 +26,7 @@ class TxtController {
     }
 
     /**
-     * Construct a WeDo2 communication object.
+     * Construct a TXT communication object.
      * @param runtime
      * @param extensionId
      */
@@ -38,6 +38,9 @@ class TxtController {
          */
         this._runtime = runtime;
         this._runtime.on('PROJECT_STOP_ALL', this.reset.bind(this));
+
+        this._updateInterval = 0;
+
 
         /**
          * Callbacks used to wait for motor input
@@ -65,6 +68,23 @@ class TxtController {
 
 
         this._runtime.registerPeripheralExtension(extensionId, this);
+        this.startUpdateCheck();
+    }
+
+    startUpdateCheck() {
+        // Every 5 ms check for updates
+        if (this._updateInterval === 0) {
+            this._updateInterval = setInterval(() => {
+                this.sendUpdateIfNeeded();
+            }, 5);
+        }
+    }
+
+    stopUpdateCheck() {
+        if (this._updateInterval !== 0) {
+            clearInterval(this._updateInterval);
+            this._updateInterval = 0;
+        }
     }
 
     // CONNECTION METHODS
@@ -108,7 +128,7 @@ class TxtController {
     }
 
     sendUpdateIfNeeded() {
-        if (this.checkIfUpdateIsNeeded()) {
+        if (this._socket && this.checkIfUpdateIsNeeded()) {
             this._socket.sendJsonMessage("ACTU", {
                 motors: this.motors,
                 outputs: this.outputs,
@@ -125,13 +145,8 @@ class TxtController {
     }
 
     checkCallbacks() {
-        for (let idx in this._motorWaitCallbacks) {
-            let func = this._motorWaitCallbacks[idx];
-            if (func()) {
-                // remove the entry
-                this._motorWaitCallbacks.splice(idx, 1);
-            }
-        }
+        // Call every callback and remove those that are done
+        this._motorWaitCallbacks.filter(value => !value());
     }
 
     // events
@@ -246,20 +261,17 @@ class TxtController {
     doSetMotorSpeed(motorId, speed) {
         this.getMotorById(motorId)
             .setSpeed08(speed);
-        this.sendUpdateIfNeeded();
     }
 
     doSetMotorSpeedDir(motorId, speed, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID)
             .setSpeed08(speed);
-        this.sendUpdateIfNeeded();
     }
 
     doSetMotorDir(motorId, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID);
-        this.sendUpdateIfNeeded();
     }
 
     // Methods for blocks
@@ -268,8 +280,6 @@ class TxtController {
             .setDirection(directionID)
             .setSpeed08(speed)
             .setDistanceLimit(steps);
-
-        this.sendUpdateIfNeeded();
 
         return this.waitForMotorCallback(motorId, steps);
     }
@@ -291,8 +301,6 @@ class TxtController {
             .setDirection(directionID2)
             .resetDistanceLimit()
             .setSpeed08(speed);
-
-        this.sendUpdateIfNeeded();
     }
 
     doSetMotorSpeedDirDistSync(motor1Id, directionID1, motor2Id, directionID2, steps, speed,) {
@@ -313,8 +321,6 @@ class TxtController {
             .setSpeed08(speed)
             .setDistanceLimit(steps);
 
-        this.sendUpdateIfNeeded();
-
         return this.waitForMotorCallback(motor1.id, steps);
     }
 
@@ -323,30 +329,24 @@ class TxtController {
             .setSync(MotorSyncEnum.SYNC_NONE)
             .setSpeed08(0)
             .setDistanceLimit(0);
-
-        this.sendUpdateIfNeeded();
     }
 
 
     doSetOutputValue(outputID, value) {
         this.outputs[outputID].setValue08(value);
-        this.sendUpdateIfNeeded();
     }
 
     doResetCounter(counterID) {
         this.getCounterById(counterID).doReset();
-        this.sendUpdateIfNeeded();
     }
 
     doConfigureInput(inputId, modeId) {
         this.getInputById(inputId).setMode(modeId);
-        this.sendUpdateIfNeeded();
     }
 
     getSensor(inputId, sensorID) {
         let input = this.getInputById(inputId);
         input.adjustAnalogInputMode(sensorID);
-        this.sendUpdateIfNeeded();
 
         return input.value;
     }
@@ -354,7 +354,6 @@ class TxtController {
     getDigitalSensor(inputId, sensorID) {
         let input = this.getInputById(inputId);
         input.adjustDigitalInputMode(sensorID);
-        this.sendUpdateIfNeeded();
 
         return input.value === 1;
     }
@@ -362,7 +361,6 @@ class TxtController {
     onOpenClose(inputId, sensorID, directionType) {
         let input = this.getInputById(inputId);
         input.adjustDigitalInputMode(sensorID);
-        this.sendUpdateIfNeeded();
 
         if (directionType === InputDigitalSensorChangeTypes.button_opens) {
             return input.oldValue === 1 && input.value === 0;
@@ -388,7 +386,6 @@ class TxtController {
     onInput(inputId, sensorType, operator, value) {
         let input = this.getInputById(inputId);
         input.adjustAnalogInputMode(sensorType);
-        this.sendUpdateIfNeeded();
 
         if (operator === '>') {
             return !(input.oldValue > value) && input.value > value;
@@ -411,7 +408,7 @@ class TxtController {
 
 
 /**
- * Scratch 3.0 blocks to interact with a LEGO WeDo 2.0 device.
+ * Scratch 3.0 blocks to interact with a TXT device.
  */
 class Scratch3TxtBlocks {
 
@@ -423,7 +420,7 @@ class Scratch3TxtBlocks {
     }
 
     /**
-     * Construct a set of WeDo 2.0 blocks.
+     * Construct a set of TXT blocks.
      * @param {Runtime} runtime - the Scratch 3.0 runtime.
      */
     constructor(runtime) {
@@ -1108,8 +1105,7 @@ class Scratch3TxtBlocks {
     // ---- MENU DONE
 
     /**
-     * Use the Device Manager client to attempt to connect to a WeDo 2.0 device.
-     * TODO!
+     * Use the Device Manager client to attempt to connect to a TXT device.
      */
     connect() {
         console.log("TRY TO CONNECT");
