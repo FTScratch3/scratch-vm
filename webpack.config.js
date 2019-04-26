@@ -79,7 +79,6 @@ module.exports = [
         },
         externals: {
             'decode-html': true,
-            'escape-html': true,
             'format-message': true,
             'htmlparser2': true,
             'immutable': true,
@@ -95,19 +94,7 @@ module.exports = [
     defaultsDeep({}, base, {
         target: 'web',
         entry: {
-            'scratch-vm': './src/index.js',
-            'vendor': [
-                // FPS counter
-                'stats.js/build/stats.min.js',
-                // Scratch Blocks
-                'scratch-blocks/dist/vertical.js',
-                // Audio
-                'scratch-audio',
-                // Storage
-                'scratch-storage',
-                // Renderer
-                'scratch-render'
-            ],
+            'benchmark': './src/playground/benchmark',
             'video-sensing-extension-debug': './src/extensions/scratch3_video_sensing/debug'
         },
         output: {
