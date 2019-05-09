@@ -130,19 +130,23 @@ class TxtController {
 
     sendUpdateIfNeeded() {
         if (this._socket && this.checkIfUpdateIsNeeded()) {
-            this._socket.sendJsonMessage("ACTU", {
-                motors: this.motors,
-                outputs: this.outputs,
-                inputs: this.inputs,
-                counters: this.counters
-            });
-
-            // Reset "mod" state
-            for (let motor of this.motors) motor.transmitted();
-            for (let input of this.inputs) input.transmitted();
-            for (let output of this.outputs) output.transmitted();
-            for (let counter of this.counters) counter.transmitted();
+            this.sendActuPacked();
         }
+    }
+
+    sendActuPacked() {
+        this._socket.sendJsonMessage("ACTU", {
+            motors: this.motors,
+            outputs: this.outputs,
+            inputs: this.inputs,
+            counters: this.counters
+        });
+
+        // Reset "mod" state
+        for (let motor of this.motors) motor.transmitted();
+        for (let input of this.inputs) input.transmitted();
+        for (let output of this.outputs) output.transmitted();
+        for (let counter of this.counters) counter.transmitted();
     }
 
     checkCallbacks() {
@@ -178,6 +182,14 @@ class TxtController {
      * Starts reading data from device after BLE has connected to it.
      */
     _onSessionConnect() { // TODO Remove or use
+
+        // Force the client to update all values
+        for (let motor of this.motors) motor.mod = true;
+        for (let input of this.inputs) input.mod = true;
+        for (let output of this.outputs) output.mod = true;
+        for (let counter of this.counters) counter.mod = true;
+
+        this.sendActuPacked();
     }
 
     // Status

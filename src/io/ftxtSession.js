@@ -25,7 +25,6 @@ class ftxtSession {
         this._sensCallback = sensCallback;
         this._soundDoneCallback = soundDoneCallback;
 
-        console.log({websocketAddress})
         this._ws = new WebSocket(websocketAddress);
 
         this._ws.onopen = () => this.connectToDevice();
@@ -51,14 +50,11 @@ class ftxtSession {
     }
 
     connectToDevice() {
-        console.log("connectToDevice")
         this.sendPingMessage();
     }
 
     _didReceiveMessage(msgStr) {
         let msg = new FTxtIncomingMessage(msgStr);
-
-        console.log("Received Packet", msg);
 
         switch (msg.type) {
             case MessageType.PONG:
@@ -134,14 +130,12 @@ class ftxtSession {
      * @param {string} message
      */
     sendMessage(message) {
-        console.log("Sending message", this._ws.readyState, message)
         if (this._ws.readyState === 1) {
             this._ws.send(message)
         }
     }
 
     sendPingMessage() {
-        console.log("Sending Ping")
         this.sendMessage(MessageType.PING);
     }
 

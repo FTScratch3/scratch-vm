@@ -2,6 +2,8 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const defaultsDeep = require('lodash.defaultsdeep');
 const path = require('path');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const webpack = require("webpack");
+
 
 const base = {
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -89,6 +91,21 @@ module.exports = [
             'socket.io-client': true,
             'text-encoding': true
         }
+    }),
+    // TXT Node-compatible
+    defaultsDeep({}, base, {
+        target: 'node',
+        entry: {
+            'scratch-vm': './src/index.js'
+        },
+        output: {
+            libraryTarget: 'commonjs2',
+            path: path.resolve('dist', 'node-txt')
+        },
+        externals: {},
+        plugins: [
+            new webpack.IgnorePlugin(/\.(jpe?g|png|gif|svg|mp3)$/i)
+        ]
     }),
     // Playground
     defaultsDeep({}, base, {
