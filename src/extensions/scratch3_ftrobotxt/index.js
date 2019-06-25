@@ -814,6 +814,15 @@ class Scratch3TxtBlocks {
                         },
                     }
                 },
+                {
+                    opcode: 'doStopAllMotor',
+                    text: formatMessage({
+                        id: 'ftxt.doStopAllMotor',
+                        default: 'Stop all motors',
+                        description: 'Stop all motors.'
+                    }),
+                    blockType: BlockType.COMMAND
+                },
 
                 // MOTOR DONE
                 {
@@ -1183,6 +1192,15 @@ class Scratch3TxtBlocks {
             Cast.toNumber(args.MOTOR_ID),
             Cast.toNumber(args.DIRECTION)
         );
+    }
+
+    doStopAllMotor(args) {
+        for (let motor of this._device.motors) {
+            this._device.doSetMotorSpeed(
+                Cast.toNumber(motor.id),
+                0
+            );
+        }
     }
 
     doStopMotor(args) {
