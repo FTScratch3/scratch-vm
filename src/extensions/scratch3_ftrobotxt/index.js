@@ -265,26 +265,34 @@ class TxtController {
 
     setMotorSync(motor1Id, motor2Id) {
         this.getMotorById(motor1Id).setSync(motor2Id);
+        this.sendUpdateIfNeeded();
     }
 
     setMotorSyncNone(motorId) {
         this.getMotorById(motorId).resetSync();
+        this.sendUpdateIfNeeded();
     }
 
     doSetMotorSpeed(motorId, speed) {
         this.getMotorById(motorId)
             .setSpeed08(speed);
+
+        this.sendUpdateIfNeeded();
     }
 
     doSetMotorSpeedDir(motorId, speed, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID)
             .setSpeed08(speed);
+
+        this.sendUpdateIfNeeded();
     }
 
     doSetMotorDir(motorId, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID);
+
+        this.sendUpdateIfNeeded();
     }
 
     // Methods for blocks
@@ -294,9 +302,12 @@ class TxtController {
             .setSpeed08(speed)
             .setDistanceLimit(steps);
 
+        this.sendUpdateIfNeeded();
+
         return this.waitForMotorCallback(motorId, steps)
             .then(() => {
                 this.doStopMotorAndReset(motorId);
+                this.sendUpdateIfNeeded();
             });
     }
 
@@ -317,6 +328,8 @@ class TxtController {
             .setDirection(directionID2)
             .resetDistanceLimit()
             .setSpeed08(speed);
+
+        this.sendUpdateIfNeeded();
     }
 
     doSetMotorSpeedDirDistSync(motor1Id, directionID1, motor2Id, directionID2, steps, speed,) {
@@ -337,10 +350,13 @@ class TxtController {
             .setSpeed08(speed)
             .setDistanceLimit(steps);
 
+        this.sendUpdateIfNeeded();
+
         return this.waitForMotorCallback(motor1.id, steps)
             .then(() => {
                 this.doStopMotorAndReset(motor1Id);
                 this.doStopMotorAndReset(motor2Id);
+                this.sendUpdateIfNeeded();
             });
     }
 
@@ -349,24 +365,33 @@ class TxtController {
             .setSync(MotorSyncEnum.SYNC_NONE)
             .setSpeed08(0)
             .setDistanceLimit(0);
+
+        this.sendUpdateIfNeeded();
     }
 
 
     doSetOutputValue(outputID, value) {
         this.outputs[outputID].setValue08(value);
+
+        this.sendUpdateIfNeeded();
     }
 
     doResetCounter(counterID) {
         this.getCounterById(counterID).doReset();
+
+        this.sendUpdateIfNeeded();
     }
 
     doConfigureInput(inputId, modeId) {
         this.getInputById(inputId).setMode(modeId);
+
+        this.sendUpdateIfNeeded();
     }
 
     getSensor(inputId, sensorID) {
         let input = this.getInputById(inputId);
         input.adjustAnalogInputMode(sensorID);
+        this.sendUpdateIfNeeded();
 
         return input.value;
     }
@@ -374,6 +399,7 @@ class TxtController {
     getDigitalSensor(inputId, sensorID) {
         let input = this.getInputById(inputId);
         input.adjustDigitalInputMode(sensorID);
+        this.sendUpdateIfNeeded();
 
         return input.value === 1;
     }
@@ -381,6 +407,7 @@ class TxtController {
     onOpenClose(inputId, sensorID, directionType) {
         let input = this.getInputById(inputId);
         input.adjustDigitalInputMode(sensorID);
+        this.sendUpdateIfNeeded();
 
         if (directionType === InputDigitalSensorChangeTypes.button_opens) {
             return input.oldValue === 1 && input.value === 0;
@@ -406,6 +433,7 @@ class TxtController {
     onInput(inputId, sensorType, operator, value) {
         let input = this.getInputById(inputId);
         input.adjustAnalogInputMode(sensorType);
+        this.sendUpdateIfNeeded();
 
         if (operator === '>') {
             return !(input.oldValue > value) && input.value > value;

@@ -172,22 +172,29 @@ class BTController {
     doSetMotorSpeed(motorId, speed) {
         this.getMotorById(motorId)
             .setSpeed08(speed);
+
+        this.sendUpdateIfNeeded();
     }
 
     doSetMotorSpeedDir(motorId, speed, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID)
             .setSpeed08(speed);
+
+        this.sendUpdateIfNeeded();
     }
 
     doSetMotorDir(motorId, directionID) {
         this.getMotorById(motorId)
             .setDirection(directionID);
+
+        this.sendUpdateIfNeeded();
     }
 
     // Methods for blocks
     doSetOutputValue(outputID, value) {
         this.outputs[outputID].setValue08(value);
+        this.sendUpdateIfNeeded();
     }
 
     doConfigureInput(inputId, modeId) {
