@@ -82,6 +82,15 @@ export class Input extends TxtInput {
         return this;
     }
 
+    reset() {
+        this._value = 0;
+        this._oldValue = 0;
+        this.mode = InputModes.mode_a5k;
+        this.mod = true;
+
+        return this;
+    }
+
     transmitted() {
         this.mod = false;
         return this;

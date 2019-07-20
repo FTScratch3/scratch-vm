@@ -447,6 +447,12 @@ class TxtController {
     }
 
     reset() {
+        for (let motor of this.motors) motor.reset();
+        for (let input of this.inputs) input.reset();
+        for (let output of this.outputs) output.reset();
+        for (let counter of this.counters) counter.doReset();
+        this.sendUpdateIfNeeded();
+
         if (this._socket)
             this._socket.sendResetMessage();
         // TODO: Delete motor callbacks
@@ -1172,6 +1178,7 @@ class Scratch3TxtBlocks {
 
         //TODO: Automatic reconnect
         this._device = new TxtController(this.runtime, Scratch3TxtBlocks.EXTENSION_ID);
+        this._device.reset();
     }
 
     getPeripheralIsConnected() {

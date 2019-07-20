@@ -48,6 +48,11 @@ export class Output {
         this.mod = false;
     }
 
+    reset() {
+        this.setValue(0);
+        return this;
+    }
+
     init() {
         this.val = 0;
     }
