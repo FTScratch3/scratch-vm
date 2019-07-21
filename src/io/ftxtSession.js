@@ -16,8 +16,10 @@ const MessageType = {
 
 class ftxtSession {
 
-    constructor(runtime, websocketAddress, connectCallback, sensCallback, soundDoneCallback) {
+    constructor(runtime, extensionId, websocketAddress, connectCallback, sensCallback, soundDoneCallback) {
         this._runtime = runtime;
+        this._extensionId = extensionId;
+
         this._status = 0;
         this._device = null;
 
@@ -28,8 +30,8 @@ class ftxtSession {
         this._ws = new WebSocket(websocketAddress);
 
         this._ws.onopen = () => this.connectToDevice();
-        this._ws.onerror = () => this._sendError('ws onerror');
-        this._ws.onclose = () => this._sendError('ws onclose');
+        this._ws.onerror = () => this.handleDisconnectError('ws onerror');
+        this._ws.onclose = () => this.handleDisconnectError('ws onclose');
         this._ws.onmessage = msg => this._didReceiveMessage(msg);
 
         this._connectionCheckInterval = null;
@@ -81,7 +83,7 @@ class ftxtSession {
         if (!connectedDevice) {
             // socket is connected, but no device is connected
             this._status = 1;
-            this._runtime.emit(this._runtime.constructor.PERIPHERAL_ERROR);
+            this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR);
         } else {
             // socket and device connected
             this._status = 2;
@@ -95,9 +97,39 @@ class ftxtSession {
         }
     }
 
+    /**
+     * Handle an error resulting from losing connection to a peripheral.
+     *
+     * This could be due to:
+     * - battery depletion
+     * - going out of bluetooth range
+     * - being powered down
+     *
+     * Disconnect the socket, and if the extension using this socket has a
+     * disconnect callback, call it. Finally, emit an error to the runtime.
+     */
+    handleDisconnectError(e ) {
+        // log.error(`BLE error: ${JSON.stringify(e)}`);
+
+        console.log("handle error " + e)
+        if (this._status === 0) {
+            this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR);
+            return;
+        }
+
+        // TODO: Fix branching by splitting up cleanup/disconnect in extension
+        this.disconnectSession();
+
+        this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTION_LOST_ERROR, {
+            message: `Scratch lost connection to`,
+            extensionId: this._extensionId
+        });
+    }
+
+
     _sendError() {
-        this._status = 0;
-        this._runtime.emit(this._runtime.constructor.PERIPHERAL_ERROR);
+        this.disconnectSession();
+        this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR);
     }
 
 
@@ -117,6 +149,8 @@ class ftxtSession {
     disconnectSession() {
         this._ws.close();
         this._status = 0;
+
+        this._runtime.emit(this._runtime.constructor.PERIPHERAL_DISCONNECTED);
     }
 
     /**

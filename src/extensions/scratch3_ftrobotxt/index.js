@@ -39,6 +39,7 @@ class TxtController {
          */
         this._runtime = runtime;
         this._runtime.on('PROJECT_STOP_ALL', this.reset.bind(this));
+        this._extensionId = extensionId;
 
         this._updateInterval = 0;
 
@@ -100,6 +101,7 @@ class TxtController {
 
     scan() {
         this._socket = new ftxtSession(this._runtime,
+            this._extensionId,
             ScratchLinkWebSocketTXT,
             () => this._onSessionConnect(),
             message => this.onSensData(message),
@@ -1174,11 +1176,12 @@ class Scratch3TxtBlocks {
         console.log("TRY TO CONNECT");
         if (this._device) {
             return;
+        } else {
+            //TODO: Automatic reconnect
+            this._device = new TxtController(this.runtime, Scratch3TxtBlocks.EXTENSION_ID);
+            this._device.reset();
         }
 
-        //TODO: Automatic reconnect
-        this._device = new TxtController(this.runtime, Scratch3TxtBlocks.EXTENSION_ID);
-        this._device.reset();
     }
 
     getPeripheralIsConnected() {

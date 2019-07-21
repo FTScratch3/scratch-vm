@@ -38,6 +38,7 @@ class BTController {
          */
         this._runtime = runtime;
         this._runtime.on('PROJECT_STOP_ALL', this.reset.bind(this));
+        this._extensionId = extensionId;
 
         this.outputs = [
             new Output(0), new Output(1)
@@ -78,6 +79,7 @@ class BTController {
 
     scan() {
         this._socket = new ftxtSession(this._runtime,
+            this._extensionId,
             ScratchLinkWebSocketBTSmart,
             () => this._onSessionConnect(),
             message => this.onSensData(message),
