@@ -1229,7 +1229,7 @@ class Scratch3TxtBlocks {
         );
     }
 
-    doStopAllMotor(args) {
+    doStopAllMotor() {
         for (let motor of this._device.motors) {
             this._device.doSetMotorSpeed(
                 Cast.toNumber(motor.id),
