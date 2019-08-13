@@ -568,8 +568,8 @@ class Scratch3BTSmartBlocks {
                 //*/
             ],
             menus: {
-                inputID: Scratch3BTSmartBlocks._buildIDMenu(4),
-                outputID: Scratch3BTSmartBlocks._buildIDMenu(2),
+                inputID: Scratch3BTSmartBlocks._buildIDMenu(4, "I"),
+                outputID: Scratch3BTSmartBlocks._buildIDMenu(2, "O"),
                 inputModes: Scratch3BTSmartBlocks._buildInputModeMenu(),
                 inputAnalogSensorTypes: Scratch3BTSmartBlocks._buildAnalogSensorTypeMenu(),
                 inputDigitalSensorTypes: Scratch3BTSmartBlocks._buildDigitalSensorTypeMenu(),
@@ -707,11 +707,11 @@ class Scratch3BTSmartBlocks {
         }];
     }
 
-    static _buildIDMenu(count) {
+    static _buildIDMenu(count, prefix = "") {
         const result = [];
         for (let n = 0; n < count; n++) {
             result.push({
-                text: String(n + 1),
+                text: prefix+String(n + 1),
                 value: String(n)
             })
         }
