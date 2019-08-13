@@ -850,6 +850,7 @@ class Scratch3TxtBlocks {
                         },
                     }
                 },
+                /*
                 {
                     opcode: 'doStopAllMotor',
                     text: formatMessage({
@@ -859,6 +860,7 @@ class Scratch3TxtBlocks {
                     }),
                     blockType: BlockType.COMMAND
                 },
+                */
 
                 // MOTOR DONE
                 {
@@ -972,6 +974,7 @@ class Scratch3TxtBlocks {
                         }
                     }
                 },
+                /*
                 {
                     opcode: 'doStopMotorAndReset',
                     text: formatMessage({
@@ -988,6 +991,7 @@ class Scratch3TxtBlocks {
                         }
                     }
                 },
+                //*/
                 // RESET
                 {
                     opcode: 'reset',
