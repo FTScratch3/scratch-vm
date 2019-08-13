@@ -594,7 +594,7 @@ class Scratch3TxtBlocks {
                     opcode: 'getCounter',
                     text: formatMessage({
                         id: 'ftxt.getCounter',
-                        default: 'Get value of counter [COUNTER_ID]',
+                        default: 'Read value of counter [COUNTER_ID]',
                         description: 'get the value of a counter'
                     }),
                     blockType: BlockType.REPORTER,
@@ -739,27 +739,6 @@ class Scratch3TxtBlocks {
                             type: ArgumentType.NUMBER,
                             menu: 'counterID',
                             defaultValue: CounterID.C1
-                        },
-                    }
-                },
-                {
-                    opcode: 'doConfigureInput',
-                    text: formatMessage({
-                        id: 'ftxt.doConfigureInput',
-                        default: 'Set input [INPUT] to [MODE]',
-                        description: 'Set the mode of the given input.'
-                    }),
-                    blockType: BlockType.COMMAND,
-                    arguments: {
-                        INPUT: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'inputID',
-                            defaultValue: 0
-                        },
-                        MODE: {
-                            type: ArgumentType.NUMBER,
-                            menu: 'inputModes',
-                            defaultValue: InputModes.mode_d10v
                         },
                     }
                 },
@@ -974,12 +953,11 @@ class Scratch3TxtBlocks {
                         }
                     }
                 },
-                /*
                 {
                     opcode: 'doStopMotorAndReset',
                     text: formatMessage({
                         id: 'ftxt.doStopMotorAndReset',
-                        default: 'Reset [MOTOR_ID]',
+                        default: 'Stop move [MOTOR_ID]',
                         description: 'Stop the motor and reset all synchronizations.'
                     }),
                     blockType: BlockType.COMMAND,
@@ -991,7 +969,27 @@ class Scratch3TxtBlocks {
                         }
                     }
                 },
-                //*/
+                {
+                    opcode: 'doConfigureInput',
+                    text: formatMessage({
+                        id: 'ftxt.doConfigureInput',
+                        default: 'Set input [INPUT] to [MODE]',
+                        description: 'Set the mode of the given input.'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    arguments: {
+                        INPUT: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'inputID',
+                            defaultValue: 0
+                        },
+                        MODE: {
+                            type: ArgumentType.NUMBER,
+                            menu: 'inputModes',
+                            defaultValue: InputModes.mode_d10v
+                        },
+                    }
+                },
                 // RESET
                 {
                     opcode: 'reset',
@@ -1025,8 +1023,8 @@ class Scratch3TxtBlocks {
         return [{
             text: formatMessage({
                 id: 'ftxt.sensor_digital_button',
-                default: 'Button',
-                description: 'Button'
+                default: 'Switch',
+                description: 'Switch'
             }),
             value: String(InputDigitalSensorTypes.sens_button)
         }, {
@@ -1039,8 +1037,8 @@ class Scratch3TxtBlocks {
         }, {
             text: formatMessage({
                 id: 'ftxt.sensor_digital_reed',
-                default: 'Reed contact',
-                description: 'Reed contact'
+                default: 'Reed switch',
+                description: 'Reed switch'
             }),
             value: String(InputDigitalSensorTypes.sens_reed)
         }, {
