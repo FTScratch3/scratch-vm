@@ -1001,10 +1001,10 @@ class Scratch3TxtBlocks {
                 //*/
             ],
             menus: {
-                motorID: Scratch3TxtBlocks._buildIDMenu(4),
-                counterID: Scratch3TxtBlocks._buildIDMenu(4),
-                inputID: Scratch3TxtBlocks._buildIDMenu(8),
-                outputID: Scratch3TxtBlocks._buildIDMenu(8),
+                motorID: Scratch3TxtBlocks._buildIDMenu(4, "M"),
+                counterID: Scratch3TxtBlocks._buildIDMenu(4, "C"),
+                inputID: Scratch3TxtBlocks._buildIDMenu(8, "I"),
+                outputID: Scratch3TxtBlocks._buildIDMenu(8, "O"),
                 inputModes: Scratch3TxtBlocks._buildInputModeMenu(),
                 inputAnalogSensorTypes: Scratch3TxtBlocks._buildAnalogSensorTypeMenu(),
                 inputDigitalSensorTypes: Scratch3TxtBlocks._buildDigitalSensorTypeMenu(),
@@ -1156,11 +1156,11 @@ class Scratch3TxtBlocks {
         }];
     }
 
-    static _buildIDMenu(count) {
+    static _buildIDMenu(count, prefix = "") {
         const result = [];
         for (let n = 0; n < count; n++) {
             result.push({
-                text: String(n + 1),
+                text: prefix + String(n + 1),
                 value: n.toString()
             })
         }
