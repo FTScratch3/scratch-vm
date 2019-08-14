@@ -308,7 +308,7 @@ class TxtController {
 
         return this.waitForMotorCallback(motorId, steps)
             .then(() => {
-                this.doStopMotorAndReset(motorId);
+                this.doStopMotorAndReset(motorId, false);
                 this.sendUpdateIfNeeded();
             });
     }
@@ -356,21 +356,22 @@ class TxtController {
 
         return this.waitForMotorCallback(motor1.id, steps)
             .then(() => {
-                this.doStopMotorAndReset(motor1Id);
-                this.doStopMotorAndReset(motor2Id);
+                this.doStopMotorAndReset(motor2Id, false);
                 this.sendUpdateIfNeeded();
             });
     }
 
-    doStopMotorAndReset(motorId) {
-        this.getMotorById(motorId)
-            .setSync(MotorSyncEnum.SYNC_NONE)
+    doStopMotorAndReset(motorId, resetSync = false) {
+        let motorById = this.getMotorById(motorId);
+        motorById
             .setSpeed08(0)
             .setDistanceLimit(0);
 
+        if(resetSync)
+            motorById.setSync(MotorSyncEnum.SYNC_NONE);
+
         this.sendUpdateIfNeeded();
     }
-
 
     doSetOutputValue(outputID, value) {
         this.outputs[outputID].setValue08(value);
@@ -1252,7 +1253,8 @@ class Scratch3TxtBlocks {
 
     doStopMotorAndReset(args) {
         return this._device.doStopMotorAndReset(
-            Cast.toNumber(args.MOTOR)
+            Cast.toNumber(args.MOTOR),
+            true
         );
     }
 
