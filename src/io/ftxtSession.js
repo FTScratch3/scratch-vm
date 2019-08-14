@@ -35,6 +35,7 @@ class ftxtSession {
         this._ws.onmessage = msg => this._didReceiveMessage(msg);
 
         this._connectionCheckInterval = null;
+        this._forcedClose = false;
     }
 
     checkIfStillConnected() {
@@ -52,6 +53,7 @@ class ftxtSession {
     }
 
     connectToDevice() {
+        this._forcedClose = false;
         this.sendPingMessage();
     }
 
@@ -82,8 +84,17 @@ class ftxtSession {
         this._device = connectedDevice;
         if (!connectedDevice) {
             // socket is connected, but no device is connected
+            console.log("TXT disconnected from executable.");
+            if (this._status === 2) {
+                this._sendError();
+                this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTION_LOST_ERROR, {
+                    message: `FTScratchTXT.exe lost connection to `,
+                    extensionId: this._extensionId
+                });
+            }
+            else
+                this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR);
             this._status = 1;
-            this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR);
         } else {
             // socket and device connected
             this._status = 2;
@@ -108,8 +119,13 @@ class ftxtSession {
      * Disconnect the socket, and if the extension using this socket has a
      * disconnect callback, call it. Finally, emit an error to the runtime.
      */
-    handleDisconnectError(e ) {
+    handleDisconnectError(e) {
         // log.error(`BLE error: ${JSON.stringify(e)}`);
+
+        if (this._forcedClose) {
+            this._forcedClose = false;
+            return;
+        }
 
         console.log("handle error " + e)
         if (this._status === 0) {
@@ -147,6 +163,7 @@ class ftxtSession {
      * Close the websocket.
      */
     disconnectSession() {
+        this._forcedClose = true;
         this._ws.close();
         this._status = 0;
 
