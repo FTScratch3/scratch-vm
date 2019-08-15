@@ -279,16 +279,22 @@ class TxtController {
     }
 
     doSetMotorSpeed(motorId, speed) {
-        this.getMotorById(motorId)
+        let motor = this.getMotorById(motorId)
             .setSpeed08(speed);
+
+        if (motor.sync > -1)
+            this.doSetMotorSpeed(motor.sync, speed);
 
         this.sendUpdateIfNeeded();
     }
 
     doSetMotorSpeedDir(motorId, speed, directionID) {
-        this.getMotorById(motorId)
+        let motor = this.getMotorById(motorId)
             .setDirection(directionID)
             .setSpeed08(speed);
+
+        if (motor.sync > -1)
+            this.doSetMotorSpeed(motor.sync, speed);
 
         this.sendUpdateIfNeeded();
     }
@@ -302,10 +308,13 @@ class TxtController {
 
     // Methods for blocks
     doSetMotorSpeedDirDist(motorId, steps, speed, directionID) {
-        this.getMotorById(motorId)
+        let motor = this.getMotorById(motorId)
             .setDirection(directionID)
             .setSpeed08(speed)
             .setDistanceLimit(steps);
+
+        if (motor.sync > -1)
+            this.doSetMotorSpeed(motor.sync, speed);
 
         this.sendUpdateIfNeeded();
 
@@ -359,21 +368,27 @@ class TxtController {
 
         return this.waitForMotorCallback(motor1.id, steps)
             .then(() => {
-                this.doStopMotorAndReset(motor2Id, false);
+                this.doStopMotorAndReset(motor1.id, false);
                 this.sendUpdateIfNeeded();
             });
     }
 
     doStopMotorAndReset(motorId, resetSync = false) {
         let motorById = this.getMotorById(motorId);
+        let sync = motorById.sync;
         motorById
             .setSpeed08(0)
             .setDistanceLimit(0);
-
-        if(resetSync)
-            motorById.setSync(MotorSyncEnum.SYNC_NONE);
-
         this.sendUpdateIfNeeded();
+
+        if (resetSync) {
+            motorById.resetSync();
+            this.sendUpdateIfNeeded();
+        }
+
+        if (sync > -1) {
+            this.doStopMotorAndReset(sync, resetSync);
+        }
     }
 
     doSetOutputValue(outputID, value) {
@@ -1256,7 +1271,7 @@ class Scratch3TxtBlocks {
 
     doStopMotorAndReset(args) {
         return this._device.doStopMotorAndReset(
-            Cast.toNumber(args.MOTOR),
+            Cast.toNumber(args.MOTOR_ID),
             true
         );
     }

@@ -51,7 +51,7 @@ export class Motor {
 
     transmitted() {
         this.mod = false;
-        this.sync = -10;
+        //this.sync = -10;
         this.dist = -10;
         return this;
     }
@@ -59,7 +59,7 @@ export class Motor {
     reset() {
         this.speed = 0;
         this.dir = 1;
-        this.sync = -10;
+        //this.sync = -10;
         this.dist = -10;
         return this;
     }
