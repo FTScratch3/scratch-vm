@@ -919,7 +919,7 @@ class Scratch3TxtBlocks {
                     opcode: 'doSetMotorSpeedDirDistSync',
                     text: formatMessage({
                         id: 'ftxt.doSetMotorSpeedDirDistSync',
-                        default: 'Move motor [MOTOR_ID] [DIRECTION] and [MOTOR_ID2] [DIRECTION2] by [STEPS] steps with [SPEED]',
+                        default: 'Move motor [MOTOR_ID] [DIRECTION] and [MOTOR_ID2] [DIRECTION2] with [SPEED] by [STEPS] steps',
                         description: 'Move the motor by the given values.'
                     }),
                     blockType: BlockType.COMMAND,
