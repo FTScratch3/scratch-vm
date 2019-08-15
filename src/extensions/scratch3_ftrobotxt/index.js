@@ -100,13 +100,16 @@ class TxtController {
     }
 
     scan() {
-        this._socket = new ftxtSession(this._runtime,
-            this._extensionId,
-            ScratchLinkWebSocketTXT,
-            () => this._onSessionConnect(),
-            message => this.onSensData(message),
-            () => this.onSoundDone()
-        );
+        if (!this._socket) {
+            this._socket = new ftxtSession(this._runtime,
+                this._extensionId,
+                ScratchLinkWebSocketTXT,
+                () => this._onSessionConnect(),
+                message => this.onSensData(message),
+                () => this.onSoundDone()
+            );
+        }
+        this._socket.connect();
     }
 
     disconnect() {
@@ -847,7 +850,7 @@ class Scratch3TxtBlocks {
                     opcode: 'doSetMotorSpeedDirDist',
                     text: formatMessage({
                         id: 'ftxt.doSetMotorSpeedDirDist',
-                        default: 'Move motor [MOTOR_ID] by [STEPS] steps with [SPEED] [DIRECTION]',
+                        default: 'Move motor [MOTOR_ID] [DIRECTION] with [SPEED] by [STEPS] steps',
                         description: 'Move the motor by the given values.'
                     }),
                     blockType: BlockType.COMMAND,

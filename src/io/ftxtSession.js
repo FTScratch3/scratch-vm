@@ -27,15 +27,30 @@ class ftxtSession {
         this._sensCallback = sensCallback;
         this._soundDoneCallback = soundDoneCallback;
 
-        this._ws = new WebSocket(websocketAddress);
+        this._ws = null;
+        this._connectionCheckInterval = null;
+        this._forcedClose = false;
+
+        this._websocketAddress = websocketAddress;
+    }
+
+    connect() {
+        if (this._ws != null) {
+            this._ws.onopen = () => null;
+            this._ws.onerror = () => null;
+            this._ws.onclose = () => null;
+            this._ws.onmessage = () => null;
+            this._ws.close();
+        }
+        this._connectionCheckInterval = null;
+        this._forcedClose = false;
+
+        this._ws = new WebSocket(this._websocketAddress);
 
         this._ws.onopen = () => this.connectToDevice();
         this._ws.onerror = () => this.handleDisconnectError('ws onerror');
         this._ws.onclose = () => this.handleDisconnectError('ws onclose');
         this._ws.onmessage = msg => this._didReceiveMessage(msg);
-
-        this._connectionCheckInterval = null;
-        this._forcedClose = false;
     }
 
     checkIfStillConnected() {
@@ -91,8 +106,7 @@ class ftxtSession {
                     message: `FTScratchTXT.exe lost connection to `,
                     extensionId: this._extensionId
                 });
-            }
-            else
+            } else
                 this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR);
             this._status = 1;
         } else {
@@ -164,7 +178,7 @@ class ftxtSession {
      */
     disconnectSession() {
         this._forcedClose = true;
-        this._ws.close();
+        if (this._ws) this._ws.close();
         this._status = 0;
 
         this._runtime.emit(this._runtime.constructor.PERIPHERAL_DISCONNECTED);
@@ -181,7 +195,7 @@ class ftxtSession {
      * @param {string} message
      */
     sendMessage(message) {
-        if (this._ws.readyState === 1) {
+        if (this._ws != null && this._ws.readyState === 1) {
             this._ws.send(message)
         }
     }
