@@ -50,6 +50,7 @@ class TxtController {
          * @private
          */
         this._motorWaitCallbacks = [];
+        this._inputWaitCallbacks = [];
         this._soundCallback = null;
 
         this.motors = [
@@ -136,7 +137,9 @@ class TxtController {
     sendUpdateIfNeeded() {
         if (this._socket && this.checkIfUpdateIsNeeded()) {
             this.sendActuPacked();
+            return true;
         }
+        return false;
     }
 
     sendActuPacked() {
@@ -156,7 +159,38 @@ class TxtController {
 
     checkCallbacks() {
         // Call every callback and remove those that are done
-        this._motorWaitCallbacks.filter(value => !value());
+        this._motorWaitCallbacks = this._motorWaitCallbacks.filter(value => !value());
+        this._inputWaitCallbacks = this._inputWaitCallbacks.filter(value => !value());
+    }
+
+    // Sensor help methods
+
+
+    adjustModeAndWaitForChange(input, newMode, bDigital) {
+        return new Promise(resolve => {
+            let oldType = input.mode;
+            if (bDigital) {
+                input.adjustDigitalInputMode(newMode);
+            } else {
+                input.adjustAnalogInputMode(newMode);
+            }
+            if (oldType !== input.mode) {
+                this.waitForInputChange().then(resolve);
+            } else {
+                resolve();
+            }
+        })
+    }
+
+    waitForInputChange() {
+        return new Promise(resolve1 => {
+            this.sendUpdateIfNeeded();
+            let check = () => {
+                resolve1();
+                return true;
+            };
+            this._inputWaitCallbacks.push(check);
+        })
     }
 
     // events
@@ -251,10 +285,14 @@ class TxtController {
     }
 
     doPlaySound(soundID) {
+        if (soundID < 0) soundID = 0;
+        if (soundID > 29) soundID = 29;
         this._socket.sendJsonMessage("PLAY", {idx: soundID});
     }
 
     doPlaySoundAndWait(soundID) {
+        if (soundID < 0) soundID = 0;
+        if (soundID > 29) soundID = 29;
         return new Promise(resolve => {
             if (this._soundCallback !== null) {
                 resolve();
@@ -411,18 +449,14 @@ class TxtController {
 
     getSensor(inputId, sensorID) {
         let input = this.getInputById(inputId);
-        input.adjustAnalogInputMode(sensorID);
-        this.sendUpdateIfNeeded();
-
-        return input.value;
+        return this.adjustModeAndWaitForChange(input, sensorID, false)
+            .then(() => input.value);
     }
 
     getDigitalSensor(inputId, sensorID) {
         let input = this.getInputById(inputId);
-        input.adjustDigitalInputMode(sensorID);
-        this.sendUpdateIfNeeded();
-
-        return input.value === 1;
+        return this.adjustModeAndWaitForChange(input, sensorID, true)
+            .then(() => input.value === 1);
     }
 
     onOpenClose(inputId, sensorID, directionType) {

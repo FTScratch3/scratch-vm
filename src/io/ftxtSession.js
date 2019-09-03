@@ -48,7 +48,7 @@ class ftxtSession {
         this._ws = new WebSocket(this._websocketAddress);
 
         this._ws.onopen = () => this.connectToDevice();
-        this._ws.onerror = () => this.handleDisconnectError('ws onerror');
+        this._ws.onerror = (event) => this.handleDisconnectError(event);
         this._ws.onclose = () => this.handleDisconnectError('ws onclose');
         this._ws.onmessage = msg => this._didReceiveMessage(msg);
     }
@@ -134,14 +134,12 @@ class ftxtSession {
      * disconnect callback, call it. Finally, emit an error to the runtime.
      */
     handleDisconnectError(e) {
-        // log.error(`BLE error: ${JSON.stringify(e)}`);
-
         if (this._forcedClose) {
             this._forcedClose = false;
             return;
         }
 
-        console.log("handle error " + e)
+        console.log("handle error ", e);
         if (this._status === 0) {
             this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR);
             return;

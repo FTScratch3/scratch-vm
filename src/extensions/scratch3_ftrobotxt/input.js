@@ -102,6 +102,7 @@ export class Input extends TxtInput {
     }
 
     adjustAnalogInputMode(modeId) {
+        let oldMode = this.mode;
         switch (modeId) {
             case InputAnalogSensorTypes.sens_color:
                 return this.setMode(2);
