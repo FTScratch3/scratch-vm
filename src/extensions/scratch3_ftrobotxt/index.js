@@ -285,13 +285,13 @@ class TxtController {
     }
 
     doPlaySound(soundID) {
-        if (soundID < 0) soundID = 0;
+        if (soundID < 1) soundID = 1;
         if (soundID > 29) soundID = 29;
         this._socket.sendJsonMessage("PLAY", {idx: soundID});
     }
 
     doPlaySoundAndWait(soundID) {
-        if (soundID < 0) soundID = 0;
+        if (soundID < 1) soundID = 1;
         if (soundID > 29) soundID = 29;
         return new Promise(resolve => {
             if (this._soundCallback !== null) {
