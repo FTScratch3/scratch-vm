@@ -39,6 +39,8 @@ class BTController {
         this._runtime = runtime;
         this._runtime.on('PROJECT_STOP_ALL', this.reset.bind(this));
 
+        this._updateInterval = 0;
+
         this.outputs = [
             new Output(0), new Output(1)
         ];
